@@ -1,11 +1,9 @@
-<table width="100%">
-    <thead>
-        <tr>
-            <td align="left"><img src="/docs/content/cube.png" alt="Cube" width="120"/></td>
-            <td align="right" style="white-space: nowrap;" width="90%">Документация -> Инициализация</td>
-        </tr>
-    </thead>
-</table>
+<div align="center">
+    <table width="100%">
+        <td align="left"><img src="/docs/content/cube.png" alt="Cube" width="100"/></td>
+        <td align="right"><h3>Документация -> Инициализация</h3></td>
+    </table>
+</div>
 
 ---
 
