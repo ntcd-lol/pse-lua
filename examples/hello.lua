@@ -11,7 +11,7 @@ Logger.info("MAIN", "hello, PSE SDK Lua!")
 
 local live = PSE.initialize()
 Logger.info("MAIN", "session mode: %s", live and "LIVE" or "MOCK")
-PSE.setCheatsEnabled(true)
+PSE.game:setCheatsEnabled(true)
 local floor = PSE.createMeshObject()
     :geometry("FACE")
     :texture("FLOOR_WHITE")

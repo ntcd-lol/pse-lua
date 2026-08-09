@@ -519,139 +519,41 @@ function PSE.createPedestalButton(opts) return PSE.createElement("PEDESTAL_BUTTO
 function PSE.createSolverButton(opts)   return PSE.createElement("SOLVER_BUTTON", opts) end
 function PSE.createWindow(opts)         return PSE.createElement("WINDOW", opts) end
 
-function PSE.initializeGame()
-    Core.call("GAME_INITIALIZE")
-end
-
-function PSE.deinitializeGame()
-    Core.call("GAME_DEINITIALIZE")
-end
-
-function PSE.setCheatsEnabled(b)
-    Core.call("GAME_SET_CHEATS_ENABLED", { bEnabled = flag(b) })
-end
-
-function PSE.getCheatsEnabled()
-    return Core.call("GAME_GET_CHEATS_ENABLED", nil, true).bEnabled == 1
-end
-
-function PSE.setNoclip(b)
-    Core.call("GAME_SET_CHEATS_NOCLIP", { bNoclipEnabled = flag(b) })
-end
-
-function PSE.getNoclip()
-    return Core.call("GAME_GET_CHEATS_NOCLIP", nil, true).bNoclipEnabled == 1
-end
-
-function PSE.setGravity(g)
-    Core.call("GAME_SET_GRAVITY", { gravity = g })
-end
-
-function PSE.getGravity()
-    return Core.call("GAME_GET_GRAVITY", nil, true).gravity
-end
-
-function PSE.checkGuid(guid)
-    Core.call("GAME_CHECK_GUID_IS_VALID", { guid = PSE.guid(guid) })
-end
-
-function PSE.setPlayerLocation(x, y, z)
-    Core.call("PLAYER_SET_LOCATION", { location = PSE.vec(x, y, z) })
-end
-
-function PSE.getPlayerLocation()
-    local o = Core.call("PLAYER_GET_LOCATION", nil, true)
-    return o.location
-end
-
-function PSE.setPlayerRotation(x, y, z, w)
-    Core.call("PLAYER_SET_ROTATION", { quat = PSE.quat(x, y, z, w) })
-end
-
-function PSE.getPlayerRotation()
-    local o = Core.call("PLAYER_GET_ROTATION", nil, true)
-    return o.quat
-end
-
-function PSE.spawnPlayer()
-    Core.call("PLAYER_SPAWN")
-end
-
-function PSE.killPlayer()
-    Core.call("PLAYER_KILL")
-end
-
 PSE.player = {
-    getPosition = function(self) return PSE.getPlayerLocation() end,
-    setPosition = function(self, x, y, z) PSE.setPlayerLocation(x, y, z); return self end,
-    getRotation = function(self) return PSE.getPlayerRotation() end,
-    setRotation = function(self, x, y, z, w) PSE.setPlayerRotation(x, y, z, w); return self end,
-    spawn       = function(self) PSE.spawnPlayer(); return self end,
-    kill        = function(self) PSE.killPlayer(); return self end,
+    getPosition = function(self) return Core.call("PLAYER_GET_LOCATION", nil, true).location end,
+    setPosition = function(self, x, y, z) Core.call("PLAYER_SET_LOCATION", { location = PSE.vec(x, y, z) }); return self end,
+    getRotation = function(self) return Core.call("PLAYER_GET_ROTATION", nil, true).quat end,
+    setRotation = function(self, x, y, z, w) Core.call("PLAYER_SET_ROTATION", { quat = PSE.quat(x, y, z, w) }); return self end,
+    spawn       = function(self) Core.call("PLAYER_SPAWN"); return self end,
+    kill        = function(self) Core.call("PLAYER_KILL"); return self end,
 }
 
 PSE.game = {
-    initialize       = function(self) PSE.initializeGame(); return self end,
-    deinitialize     = function(self) PSE.deinitializeGame(); return self end,
-    setCheatsEnabled = function(self, b) PSE.setCheatsEnabled(b); return self end,
-    getCheatsEnabled = function(self) return PSE.getCheatsEnabled() end,
-    setNoclip        = function(self, b) PSE.setNoclip(b); return self end,
-    getNoclip        = function(self) return PSE.getNoclip() end,
-    setGravity       = function(self, g) PSE.setGravity(g); return self end,
-    getGravity       = function(self) return PSE.getGravity() end,
-    checkGuid        = function(self, guid) return PSE.checkGuid(guid) end,
+    initialize       = function(self) Core.call("GAME_INITIALIZE"); return self end,
+    deinitialize     = function(self) Core.call("GAME_DEINITIALIZE"); return self end,
+    setCheatsEnabled = function(self, b) Core.call("GAME_SET_CHEATS_ENABLED", { bEnabled = flag(b) }); return self end,
+    getCheatsEnabled = function(self) return Core.call("GAME_GET_CHEATS_ENABLED", nil, true).bEnabled == 1 end,
+    setNoclip        = function(self, b) Core.call("GAME_SET_CHEATS_NOCLIP", { bNoclipEnabled = flag(b) }); return self end,
+    getNoclip        = function(self) return Core.call("GAME_GET_CHEATS_NOCLIP", nil, true).bNoclipEnabled == 1 end,
+    setGravity       = function(self, g) Core.call("GAME_SET_GRAVITY", { gravity = g }); return self end,
+    getGravity       = function(self) return Core.call("GAME_GET_GRAVITY", nil, true).gravity end,
+    checkGuid        = function(self, guid) Core.call("GAME_CHECK_GUID_IS_VALID", { guid = PSE.guid(guid) }); return self end,
 }
 
 PSE.gun = {
-    setEnabled = function(self, b) PSE.setSolverGunEnabled(b); return self end,
-    getEnabled = function(self) return PSE.getSolverGunEnabled() end,
-    use        = function(self) PSE.solverGunUse(); return self end,
-    release    = function(self) PSE.solverGunRelease(); return self end,
-    throw      = function(self) PSE.solverGunThrow(); return self end,
+    setEnabled = function(self, b) Core.call("SOLVER_GUN_SET_ENABLED", { bEnabled = flag(b) }); return self end,
+    getEnabled = function(self) return Core.call("SOLVER_GUN_GET_ENABLED", nil, true).bEnabled == 1 end,
+    use        = function(self) Core.call("SOLVER_GUN_ACTION_USE"); return self end,
+    release    = function(self) Core.call("SOLVER_GUN_ACTION_RELEASE"); return self end,
+    throw      = function(self) Core.call("SOLVER_GUN_ACTION_THROW"); return self end,
 }
 
 PSE.flashlight = {
-    setEnabled = function(self, b) PSE.setFlashlightEnabled(b); return self end,
-    getEnabled = function(self) return PSE.getFlashlightEnabled() end,
-    setState   = function(self, b) PSE.setFlashlightState(b); return self end,
-    getState   = function(self) return PSE.getFlashlightState() end,
+    setEnabled = function(self, b) Core.call("FLASHLIGHT_SET_ENABLED", { bEnabled = flag(b) }); return self end,
+    getEnabled = function(self) return Core.call("FLASHLIGHT_GET_ENABLED", nil, true).bEnabled == 1 end,
+    setState   = function(self, b) Core.call("FLASHLIGHT_SET_STATE", { bState = flag(b) }); return self end,
+    getState   = function(self) return Core.call("FLASHLIGHT_GET_STATE", nil, true).bState == 1 end,
 }
-
-function PSE.setSolverGunEnabled(b)
-    Core.call("SOLVER_GUN_SET_ENABLED", { bEnabled = flag(b) })
-end
-
-function PSE.getSolverGunEnabled()
-    return Core.call("SOLVER_GUN_GET_ENABLED", nil, true).bEnabled == 1
-end
-
-function PSE.solverGunUse()
-    Core.call("SOLVER_GUN_ACTION_USE")
-end
-
-function PSE.solverGunRelease()
-    Core.call("SOLVER_GUN_ACTION_RELEASE")
-end
-
-function PSE.solverGunThrow()
-    Core.call("SOLVER_GUN_ACTION_THROW")
-end
-
-function PSE.setFlashlightEnabled(b)
-    Core.call("FLASHLIGHT_SET_ENABLED", { bEnabled = flag(b) })
-end
-
-function PSE.getFlashlightEnabled()
-    return Core.call("FLASHLIGHT_GET_ENABLED", nil, true).bEnabled == 1
-end
-
-function PSE.setFlashlightState(b)
-    Core.call("FLASHLIGHT_SET_STATE", { bState = flag(b) })
-end
-
-function PSE.getFlashlightState()
-    return Core.call("FLASHLIGHT_GET_STATE", nil, true).bState == 1
-end
 
 local handlers = {}
 

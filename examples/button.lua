@@ -14,7 +14,7 @@
 Logger.info("MAIN", "button + door demo")
 
 local live = PSE.initialize()
-PSE.setCheatsEnabled(true)
+PSE.game:setCheatsEnabled(true)
 
 local floor = PSE.createMeshObject()
     :geometry("FACE")

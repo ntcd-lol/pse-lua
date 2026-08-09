@@ -19,20 +19,20 @@ Logger.info("MAIN", "buffers initialized: connected to game shared memory")
 local mode = core.mock() and "MOCK (offline simulation)" or "LIVE"
 Logger.info("MAIN", "session mode: %s", mode)
 
-local okGame, errGame = pcall(PSE.initializeGame)
+local okGame, errGame = pcall(PSE.game.initialize, PSE.game)
 if okGame then
     Logger.info("MAIN", "game initialized: player moved to the SDK level")
 else
-    Logger.warn("MAIN", "initializeGame() skipped: %s", tostring(errGame))
+    Logger.warn("MAIN", "PSE.game:initialize() skipped: %s", tostring(errGame))
 end
 
-local g = PSE.getGravity()
-Logger.info("MAIN", "getGravity()      = %s", tostring(g))
+local g = PSE.game:getGravity()
+Logger.info("MAIN", "PSE.game:getGravity() = %s", tostring(g))
 
-PSE.setCheatsEnabled(true)
-Logger.info("MAIN", "cheats enabled    = %s", tostring(PSE.getCheatsEnabled()))
+PSE.game:setCheatsEnabled(true)
+Logger.info("MAIN", "cheats enabled      = %s", tostring(PSE.game:getCheatsEnabled()))
 
-local loc = PSE.getPlayerLocation()
+local loc = PSE.player:getPosition()
 Logger.info("MAIN", "player location   = %.1f %.1f %.1f",
     loc[1] or 0, loc[2] or 0, loc[3] or 0)
 
@@ -52,6 +52,6 @@ Logger.info("MAIN", "door created, guid = %s, state = %d", tostring(door.guid), 
 
 Logger.info("MAIN", "connection OK - the game answered every command")
 
-PSE.deinitializeGame()
+PSE.game:deinitialize()
 PSE.deinitialize()
 Logger.info("MAIN", "session closed")

@@ -11,28 +11,36 @@
 
 ## Инициализация
 
-### `PSE.bootstrap()`
-
-Пожалуй, самый **лучший** способ. Он активирует PSE SDK и Shared Memory, а после сразу же делает запрос к игре. На этом его работа заканчивается. И в скрипте просто в начале:
-
-```lua
-PSE.bootstrap() --- или, pse.bootstrap() - без разницы.
-```
-
 ### `PSE.initialize()`
 
-Инициализирует ТОЛЬКО PSE SDK и Shared Memory, но не пробуждает игру. Использовать с `PSE.initializeGame()`.
+Активирует PSE SDK и Shared Memory, после чего подключается к запущенной игре. Если игра не отвечает — режим автоматически переключается в [MOCK-режим](/docs/init/mock.md), поэтому скрипт продолжит работу офлайн:
+
+```lua
+local live = PSE.initialize()
+Logger.info("MAIN", "session mode: %s", live and "LIVE" or "MOCK")
+```
+
+Возвращает `true` при подключении к игре и `false`, когда включён MOCK-режим.
+
+### `PSE.game:initialize()`
+
+После `PSE.initialize()` будит игру — перемещает игрока на SDK-уровень:
 
 ```lua
 PSE.initialize()
-PSE.initializeGame()
+PSE.game:initialize()
 ```
 
 ## Отключение
 
 ### `PSE.deinitialize()`
 
-Несмотря на то, что даже прервав код с помощью Ctrl+C с игрой ничего страшного не произойдет, но Shared Memory может остаться не закрытой, из-за чего лучше использовать стандартный метод `PSE.deinitialize()`.
+Даже если прервать код с помощью Ctrl+C, с игрой ничего страшного не произойдёт, но Shared Memory может остаться открытой. Используйте стандартный метод `PSE.deinitialize()`, а перед ним — `PSE.game:deinitialize()`, чтобы вернуться в главное меню:
+
+```lua
+PSE.game:deinitialize()
+PSE.deinitialize()
+```
 
 ---
 

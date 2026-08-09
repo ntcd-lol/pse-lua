@@ -47,7 +47,7 @@ PSE.createMeshObject()
     :visible(false)
     :create()
 
-PSE.setSolverGunEnabled(false)
+PSE.gun:setEnabled(false)
 
 local lasers = {}
 for i = 0, N - 1 do
