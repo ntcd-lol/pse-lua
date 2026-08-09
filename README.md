@@ -4,9 +4,8 @@
 
 <div align="center">
   <img alt="Commits" src="https://img.shields.io/github/commit-activity/m/ntcd-lol/pse-lua?style=for-the-badge">
-  <img alt="Lines of Code" src="/badges/lines.svg">
+  <img alt="Lines of Code" src="https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/ntcd-lol/ca292094533edaf22a89d670e2add825/raw/loc.json&style=for-the-badge">
 </div>
-
 
 ---
 
