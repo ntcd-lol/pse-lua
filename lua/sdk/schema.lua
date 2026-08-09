@@ -26,7 +26,6 @@ local tr   = "transform"
 
 M.COMMANDS = {
 
-    -- Game
     GAME_SET_CHEATS_ENABLED = cmd(0x00100001, { bEnabled = { 0, "i1" } }),
     GAME_GET_CHEATS_ENABLED = cmd(0x00100002, nil, { bEnabled = { 0, "i1" } }),
     GAME_SET_CHEATS_NOCLIP  = cmd(0x00100003, { bNoclipEnabled = { 0, "i1" } }),
@@ -37,7 +36,6 @@ M.COMMANDS = {
     GAME_INITIALIZE         = cmd(0x00100008),
     GAME_DEINITIALIZE       = cmd(0x00100009),
 
-    -- Player
     PLAYER_SET_LOCATION     = cmd(0x00200001, { location = { 0, v3 } }),
     PLAYER_GET_LOCATION     = cmd(0x00200002, nil, { location = { 0, v3 } }),
     PLAYER_SET_ROTATION     = cmd(0x00200003, { quat = { 0, q4 } }),
@@ -45,25 +43,21 @@ M.COMMANDS = {
     PLAYER_SPAWN            = cmd(0x00200005),
     PLAYER_KILL             = cmd(0x00200006),
 
-    -- Solver Gun
     SOLVER_GUN_SET_ENABLED  = cmd(0x00300001, { bEnabled = { 0, "i1" } }),
     SOLVER_GUN_GET_ENABLED  = cmd(0x00300002, nil, { bEnabled = { 0, "i1" } }),
     SOLVER_GUN_ACTION_USE   = cmd(0x00300003),
     SOLVER_GUN_ACTION_RELEASE = cmd(0x00300004),
     SOLVER_GUN_ACTION_THROW = cmd(0x00300005),
 
-    -- Flashlight
     FLASHLIGHT_SET_ENABLED  = cmd(0x00400001, { bEnabled = { 0, "i1" } }),
     FLASHLIGHT_GET_ENABLED  = cmd(0x00400002, nil, { bEnabled = { 0, "i1" } }),
     FLASHLIGHT_SET_STATE    = cmd(0x00400003, { bState = { 0, "i1" } }),
     FLASHLIGHT_GET_STATE    = cmd(0x00400004, nil, { bState = { 0, "i1" } }),
 
-    -- Static Mesh
     STATIC_MESH_CREATE      = cmd(0x00500001, {
         transform = { 0, tr }, mesh = { 40, "u2" }, material = { 42, "u2" },
     }),
 
-    -- Dynamic Mesh
     DYNAMIC_MESH_CREATE     = cmd(0x00600001, {
         transform = { 0, tr }, mesh = { 40, "u2" }, material = { 42, "u2" },
         bVisibility = { 44, "i1" },
@@ -76,7 +70,6 @@ M.COMMANDS = {
     DYNAMIC_MESH_GET_TRANSFORM   = cmd(0x00600007, { guid = { 0, guid } }, { transform = { 0, tr } }),
     DYNAMIC_MESH_DESTROY         = cmd(0x00600008, { guid = { 0, guid } }),
 
-    -- Element
     ELEMENT_CREATE = cmd(0x00700001, {
         transform = { 0, tr }, class = { 40, "u2" }, callback = { 42, "u8" },
         state = { 50, "i1" }, bVisibility = { 51, "i1" },

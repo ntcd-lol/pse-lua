@@ -28,10 +28,6 @@ local PSE = {}
 
 PSE.version = "0.1.0"
 
--- ---------------------------------------------------------------------------
--- Exposed modules / enums
--- ---------------------------------------------------------------------------
-
 PSE.Core = Core
 PSE.Logger = Logger
 PSE.Registers = Registers
@@ -51,18 +47,10 @@ PSE.names = {
     result = function(v) return Enums.byValue(Enums.RESULT, v) end,
 }
 
--- ---------------------------------------------------------------------------
--- Lifecycle
--- ---------------------------------------------------------------------------
-
 function PSE.deinitialize()
     Core.deinitialize()
 end
 
--- Connects to the game if it is reachable, otherwise falls back to offline
--- (mock) mode automatically. Returns true when running live against the game.
--- Mirrors the original SDK connect flow: pseInitializeBuffers + GAME_INITIALIZE
--- (moves the player to the SDK level - this is what makes in-game ESC/pause work).
 function PSE.initialize()
     if core.mock() then return false end
     local r = Core.initialize()
@@ -88,10 +76,6 @@ function PSE.sleep(ms)
     Core.raw.sleep(ms)
 end
 
--- ---------------------------------------------------------------------------
--- Math / value helpers
--- ---------------------------------------------------------------------------
-
 function PSE.vec(x, y, z)
     if type(x) == "table" then return { x[1], x[2], x[3] } end
     return { x, y, z }
@@ -102,7 +86,6 @@ function PSE.quat(x, y, z, w)
     return { x, y, z, w or 1 }
 end
 
--- Quaternion from euler angles in degrees (pitch, yaw, roll), mirrors pse::Quat
 function PSE.deg(pitch, yaw, roll)
     local d2r = math.pi / 180
     local p, y, r = pitch * d2r, yaw * d2r, roll * d2r
@@ -127,10 +110,6 @@ function PSE.guid(v)
     if type(v) == "table" then v = v.guid end
     return v
 end
-
--- ---------------------------------------------------------------------------
--- Element registry
--- ---------------------------------------------------------------------------
 
 local registry = { byName = {}, byGuid = {} }
 
@@ -159,10 +138,6 @@ function PSE.get(key)
     return registry.byGuid[tostring(key)]
 end
 
--- ---------------------------------------------------------------------------
--- Defaults / shared helpers
--- ---------------------------------------------------------------------------
-
 local function defaultTransform()
     return { quat = { 0, 0, 0, 1 }, location = { 0, 0, 0 }, scale = { 1, 1, 1 } }
 end
@@ -184,10 +159,6 @@ end
 local function flag(b)
     return b and 1 or 0
 end
-
--- ---------------------------------------------------------------------------
--- MeshObject (dynamic mesh builder)
--- ---------------------------------------------------------------------------
 
 local MeshObject = {}
 MeshObject.__index = MeshObject
@@ -327,10 +298,6 @@ function MeshObject:destroy()
     self.guid = nil
     return self
 end
-
--- ---------------------------------------------------------------------------
--- Element (spawnable object builder)
--- ---------------------------------------------------------------------------
 
 local Element = {}
 Element.__index = Element
@@ -521,10 +488,6 @@ function Element:destroy()
     return self
 end
 
--- ---------------------------------------------------------------------------
--- Factories
--- ---------------------------------------------------------------------------
-
 function PSE.createMeshObject(opts)
     return MeshObject.new(opts)
 end
@@ -566,10 +529,6 @@ function PSE.createPedestalButton(opts) return PSE.createElement("PEDESTAL_BUTTO
 function PSE.createSolverButton(opts)   return PSE.createElement("SOLVER_BUTTON", opts) end
 function PSE.createWindow(opts)         return PSE.createElement("WINDOW", opts) end
 
--- ---------------------------------------------------------------------------
--- Game
--- ---------------------------------------------------------------------------
-
 function PSE.initializeGame()
     Core.call("GAME_INITIALIZE")
 end
@@ -606,10 +565,6 @@ function PSE.checkGuid(guid)
     Core.call("GAME_CHECK_GUID_IS_VALID", { guid = PSE.guid(guid) })
 end
 
--- ---------------------------------------------------------------------------
--- Player
--- ---------------------------------------------------------------------------
-
 function PSE.setPlayerLocation(x, y, z)
     Core.call("PLAYER_SET_LOCATION", { location = PSE.vec(x, y, z) })
 end
@@ -635,13 +590,6 @@ end
 function PSE.killPlayer()
     Core.call("PLAYER_KILL")
 end
-
--- ---------------------------------------------------------------------------
--- Object-style access: pse.player / pse.game / pse.gun / pse.flashlight
--- ---------------------------------------------------------------------------
--- Все сущности доступны и как обычные функции (PSE.getPlayerLocation()), и как
--- объекты (pse.player:getPosition()). Объекты возвращают себя в set-методах,
--- поэтому их можно чейнить: pse.player:setPosition(0,0,-100):spawn()
 
 PSE.player = {
     getPosition = function(self) return PSE.getPlayerLocation() end,
@@ -679,10 +627,6 @@ PSE.flashlight = {
     getState   = function(self) return PSE.getFlashlightState() end,
 }
 
--- ---------------------------------------------------------------------------
--- Solver Gun
--- ---------------------------------------------------------------------------
-
 function PSE.setSolverGunEnabled(b)
     Core.call("SOLVER_GUN_SET_ENABLED", { bEnabled = flag(b) })
 end
@@ -703,10 +647,6 @@ function PSE.solverGunThrow()
     Core.call("SOLVER_GUN_ACTION_THROW")
 end
 
--- ---------------------------------------------------------------------------
--- Flashlight
--- ---------------------------------------------------------------------------
-
 function PSE.setFlashlightEnabled(b)
     Core.call("FLASHLIGHT_SET_ENABLED", { bEnabled = flag(b) })
 end
@@ -722,10 +662,6 @@ end
 function PSE.getFlashlightState()
     return Core.call("FLASHLIGHT_GET_STATE", nil, true).bState == 1
 end
-
--- ---------------------------------------------------------------------------
--- Events
--- ---------------------------------------------------------------------------
 
 local handlers = {}
 
@@ -764,7 +700,6 @@ function PSE.pollAll()
     return out
 end
 
--- Runs the event loop. duration in seconds (nil = forever, Ctrl+C to stop).
 function PSE.run(duration)
     local start = Core.millis()
     while true do
@@ -775,10 +710,6 @@ function PSE.run(duration)
         Core.raw.sleep(1)
     end
 end
-
--- ---------------------------------------------------------------------------
--- Mock helpers (only meaningful with --mock)
--- ---------------------------------------------------------------------------
 
 PSE.mock = {}
 

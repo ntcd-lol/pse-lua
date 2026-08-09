@@ -27,7 +27,7 @@ cmake --build build --config Release
 
  - [Инициализация](/docs/init/index.md)
    - [MOCK-режим](/docs/init/mock.md)
-   - REPL
+   - [REPL](/docs/init/repl.md)
  - Работа с игрой
  - Объект Player
  - Создание сторонних объектов

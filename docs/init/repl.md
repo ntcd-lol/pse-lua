@@ -2,7 +2,7 @@
   <table width="100%">
     <tr>
       <td align="left"><img src="/docs/content/cube.png" alt="Cube" width="50"/></td>
-      <td align="right"><h3>Документация → Инициализация</h3></td>
+      <td align="right"><h3>Документация → Инициализация → REPL</h3></td>
     </tr>
   </table>
 </div>

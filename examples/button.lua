@@ -22,11 +22,9 @@
 
 Logger.info("MAIN", "button + door demo")
 
--- Connect to the game, or fall back to offline mock mode automatically.
 local live = PSE.initialize()
 PSE.setCheatsEnabled(true)
 
--- Floor
 local floor = PSE.createMeshObject()
     :geometry("FACE")
     :texture("FLOOR_WHITE")
@@ -34,9 +32,6 @@ local floor = PSE.createMeshObject()
     :position(0, 0, 0)
     :create()
 
--- Door that the button will control.
--- Register [0] bit C = дверь подсвечивается зелёным при Callback Ping'е,
--- это визуальная индикация, что дверь "обвязана" с кнопкой.
 local door = PSE.createDoor()
     :position(0, 100, 0)
     :name("door")
@@ -44,8 +39,6 @@ local door = PSE.createDoor()
     :create()
 Logger.info("MAIN", "door guid = %s, state = %d", tostring(door.guid), door:getState())
 
--- Lamp next to the button: lights up while the button is pressed, so the
--- button -> door wiring is visible in the game.
 local lamp = PSE.createLamp()
     :position(60, -100, 0)
     :name("lamp")
@@ -54,8 +47,6 @@ local lamp = PSE.createLamp()
     :create()
 Logger.info("LAMP", "lamp guid = %s", tostring(lamp.guid))
 
--- Button: placed a bit away from the spawn point so the player has to walk
--- to it and press it deliberately.
 local button = PSE.createButton()
     :position(0, -100, 0)
     :name("button")

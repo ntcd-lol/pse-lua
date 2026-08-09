@@ -41,10 +41,6 @@ local colors = true
 local fileHandle = nil
 local filePath = nil
 
--- ---------------------------------------------------------------------------
--- Time (:DD:HH:MM:SS.MSS)
--- ---------------------------------------------------------------------------
-
 local function timestamp()
     local ms = (core and core.millis) and core.millis() or (os.time() * 1000)
     local sec = math.floor(ms / 1000)
@@ -52,10 +48,6 @@ local function timestamp()
     return ("%s:%02d:%02d:%02d.%03d")
         :format((":%02d"):format(t.day), t.hour, t.min, t.sec, ms % 1000)
 end
-
--- ---------------------------------------------------------------------------
--- Spec code parser (&CD<hh><s>& and &R&)
--- ---------------------------------------------------------------------------
 
 local function parseSpecCodes(input, toAnsi)
     local out = {}
@@ -98,10 +90,6 @@ local function parseSpecCodes(input, toAnsi)
     return table.concat(out)
 end
 
--- ---------------------------------------------------------------------------
--- Formatting (printf-like variables)
--- ---------------------------------------------------------------------------
-
 local function doFormat(fmt, ...)
     local n = select("#", ...)
     if n == 0 then return tostring(fmt) end
@@ -111,10 +99,6 @@ local function doFormat(fmt, ...)
     for i = 1, n do parts[#parts + 1] = tostring((select(i, ...))) end
     return table.concat(parts, " ")
 end
-
--- ---------------------------------------------------------------------------
--- Core writer
--- ---------------------------------------------------------------------------
 
 local function write(levelName, ...)
     local lv = LEVELS[levelName]
@@ -150,12 +134,7 @@ local function write(levelName, ...)
     end
 end
 
--- ---------------------------------------------------------------------------
--- Public API
--- ---------------------------------------------------------------------------
-
 function M.init()
-    -- Console preparation (UTF-8 / VT) is done by the C host; nothing to do.
     return true
 end
 
@@ -212,7 +191,6 @@ function M.color(color)
     return PALETTE[tostring(color)] or error("Logger: unknown color " .. tostring(color), 2)
 end
 
--- Returns a "painted" text: &CD<color><style>&...&R&
 function M.paint(text, color, style)
     local c = M.color(color)
     local s = tonumber(style) or 0

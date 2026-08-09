@@ -31,10 +31,6 @@ local M = {}
 
 M.raw = c
 
--- ---------------------------------------------------------------------------
--- Callback registry (Lua function <-> opaque u64 id)
--- ---------------------------------------------------------------------------
-
 local callbacks = {}
 local nextCallbackId = 1
 
@@ -61,10 +57,6 @@ function M.invokeCallback(id, guid, state)
     end
 end
 
--- ---------------------------------------------------------------------------
--- Value normalization
--- ---------------------------------------------------------------------------
-
 local function normalizeValue(t, value)
     if t == "i1" and type(value) == "boolean" then return value and 1 or 0 end
     if t == "guid" and type(value) == "table" and value.guid ~= nil then return value.guid end
@@ -76,11 +68,6 @@ local function normalizeValue(t, value)
     return value
 end
 
--- ---------------------------------------------------------------------------
--- Command invocation
--- ---------------------------------------------------------------------------
-
--- Packs input fields into a payload according to the schema.
 function M.packInput(cmd, inFields)
     local payload = Pack.new()
     if inFields then
@@ -94,9 +81,6 @@ function M.packInput(cmd, inFields)
     return payload
 end
 
--- Sends a single command and waits for the game result.
--- Returns a table of decoded output fields (possibly empty).
--- Raises on a non-success result unless opts.assert == false (then returns nil, resultName).
 function M.call(command, inFields, outFields, opts)
     opts = opts or {}
     local name = tostring(command):upper()
@@ -124,7 +108,6 @@ function M.call(command, inFields, outFields, opts)
     return out
 end
 
--- Fire-and-forget push (no waiting). Use with Core.synchronize().
 function M.push(command, inFields)
     local name = tostring(command):upper()
     local cmd = Schema.COMMANDS[name]
@@ -135,10 +118,6 @@ end
 function M.synchronize()
     c.synchronize()
 end
-
--- ---------------------------------------------------------------------------
--- Event polling (raw decode)
--- ---------------------------------------------------------------------------
 
 function M.poll()
     local header, data = c.poll_event()
@@ -168,10 +147,6 @@ function M.pollAll()
     return out
 end
 
--- ---------------------------------------------------------------------------
--- Lifecycle passthrough
--- ---------------------------------------------------------------------------
-
 function M.initialize()
     return c.initialize()
 end
@@ -183,10 +158,6 @@ end
 function M.millis()
     return c.millis()
 end
-
--- ---------------------------------------------------------------------------
--- Exposed enums / helpers
--- ---------------------------------------------------------------------------
 
 M.command = Enums.command
 M.result = Enums.result

@@ -64,15 +64,12 @@ namespace psebridge
         if (env && *env) gSearchPaths.emplace_back(env);
 
         const std::string exeDir = exeDirectory();
-        // Next to the executable, current directory, and a few relative hops up
-        // (the project lives at <workspace>/PSE SDK Lua/pse-lua, the dll at <workspace>/pse.dll).
         gSearchPaths.push_back(exeDir + "\\pse.dll");
         gSearchPaths.push_back(".\\pse.dll");
         gSearchPaths.push_back(exeDir + "\\..\\pse.dll");
         gSearchPaths.push_back(exeDir + "\\..\\..\\pse.dll");
         gSearchPaths.push_back(exeDir + "\\..\\..\\..\\pse.dll");
 
-        // De-duplicate while keeping order
         std::vector<std::string> unique;
         for (const auto& p : gSearchPaths)
         {

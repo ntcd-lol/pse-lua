@@ -34,10 +34,6 @@ extern "C" {
 
 static const char* kVersion = "0.1.0";
 
-// ---------------------------------------------------------------------------
-// Console
-// ---------------------------------------------------------------------------
-
 static void enableVirtualTerminal()
 {
     HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -52,10 +48,6 @@ static void enableVirtualTerminal()
     SetConsoleOutputCP(CP_UTF8);
     SetConsoleCP(CP_UTF8);
 }
-
-// ---------------------------------------------------------------------------
-// Lua helpers
-// ---------------------------------------------------------------------------
 
 static void reportError(lua_State* L)
 {
@@ -73,10 +65,8 @@ static int traceback(lua_State* L)
     return 1;
 }
 
-// Serializes a Lua value into the output stream (used by the REPL).
 static void printValue(lua_State* L, int index, int depth);
 
-// Runs the compiled chunk currently on top of the stack; prints returned values.
 static void runChunkOnTop(lua_State* L)
 {
     int status = lua_pcall(L, 0, LUA_MULTRET, 0);
@@ -95,7 +85,6 @@ static void runChunkOnTop(lua_State* L)
     lua_pop(L, n);
 }
 
-// Serializes a Lua value into the output stream (used by the REPL).
 static void printValue(lua_State* L, int index, int depth)
 {
     index = lua_absindex(L, index);
@@ -139,30 +128,9 @@ static bool isUnfinishedSyntax(lua_State* L)
     size_t len = 0;
     const char* msg = lua_tolstring(L, -1, &len);
     if (!msg) return false;
-    // Lua 5.4 marks incomplete input with a trailing "<eof>" in the message,
-    // e.g. "'end' expected near <eof>" (5.3 quoted it: "near '<eof>'").
     return (len >= 5 && std::strncmp(msg + len - 5, "<eof>", 5) == 0) ||
            std::strstr(msg, "near '<eof>'") != nullptr;
 }
-
-// ---------------------------------------------------------------------------
-// Builder-chain detection (REPL)
-// ---------------------------------------------------------------------------
-//
-// The REPL executes single-line statements immediately, but object builders
-// are usually typed over several lines:
-//
-//     local door = PSE.createDoor()
-//         :position(0, 100, 0)
-//         :name("door")
-//         :create()
-//
-// To make this work the REPL keeps buffering input until the chain reaches
-// ":create()".  A buffer is considered "still open" when:
-//   * it ends with a method-call continuation line (":method" / ".field"), or
-//   * its last statement calls a PSE.create... factory but does not finish
-//     the chain with ":create()".
-// A blank line commits whatever has been buffered so far.
 
 static std::string rtrim(const std::string& s)
 {
@@ -176,7 +144,6 @@ static std::string ltrim(const std::string& s)
     return start == std::string::npos ? "" : s.substr(start);
 }
 
-// Does the trimmed code end with a ":create(...)" call?
 static bool endsWithCreate(const std::string& code)
 {
     const std::string t = rtrim(code);
@@ -195,21 +162,19 @@ static bool endsWithCreate(const std::string& code)
                 return rtrim(t.substr(i + 1)).empty();
         }
     }
-    return false; // unterminated -> not closed
+    return false; 
 }
 
-// Does the line continue an existing builder chain (":method" / ".field")?
 static bool lineIsContinuation(const std::string& lastLine)
 {
     const std::string t = ltrim(lastLine);
     if (t.empty()) return false;
-    if (t.size() >= 2 && t[0] == ':' && t[1] == ':') return false; // '::label::'
+    if (t.size() >= 2 && t[0] == ':' && t[1] == ':') return false; 
     if (t[0] == ':') return true;
-    if (t[0] == '.') return t.size() < 2 || t[1] != '.';           // not '..'
+    if (t[0] == '.') return t.size() < 2 || t[1] != '.';           
     return false;
 }
 
-// Does the last statement of the buffer start an object builder?
 static bool lastStatementHasBuilderStart(const std::string& code)
 {
     const size_t cut = code.find_last_of("\n;");
@@ -240,14 +205,8 @@ static bool isBuilderOpen(const std::string& code)
     return false;
 }
 
-// Tries to run the buffered code.  Returns true when the input was fully
-// handled (ran / errored) and false when the REPL should keep reading lines.
-// Expression mode ("return <buf>") is tried first so that bare expressions
-// and function calls print their results (e.g. pse.player:getPosition()).
-// When force is set (blank line / EOF) builder chains are committed as-is.
 static bool tryRunBuffer(lua_State* L, const std::string& buf, bool force)
 {
-    // 1) Expression mode: "return <buf>".
     {
         const std::string expr = "return " + buf;
         const int eStatus = luaL_loadbuffer(L, expr.data(), expr.size(), "=pse");
@@ -255,7 +214,7 @@ static bool tryRunBuffer(lua_State* L, const std::string& buf, bool force)
         {
             if (!force && isBuilderOpen(buf))
             {
-                lua_pop(L, 1); // still building -> keep reading
+                lua_pop(L, 1); 
                 return false;
             }
             runChunkOnTop(L);
@@ -264,13 +223,12 @@ static bool tryRunBuffer(lua_State* L, const std::string& buf, bool force)
         lua_pop(L, 1);
     }
 
-    // 2) Statement mode.
     const int status = luaL_loadbuffer(L, buf.data(), buf.size(), "=pse");
     if (status == LUA_OK)
     {
         if (!force && isBuilderOpen(buf))
         {
-            lua_pop(L, 1); // still building -> keep reading
+            lua_pop(L, 1); 
             return false;
         }
         runChunkOnTop(L);
@@ -279,7 +237,7 @@ static bool tryRunBuffer(lua_State* L, const std::string& buf, bool force)
 
     const bool unfinished = isUnfinishedSyntax(L);
     lua_pop(L, 1);
-    if (unfinished && !force) return false; // e.g. multiline block
+    if (unfinished && !force) return false; 
 
     luaL_loadbuffer(L, buf.data(), buf.size(), "=pse");
     reportError(L);
@@ -326,17 +284,14 @@ static void replLine(lua_State* L, const std::string& raw)
 
     if (line.empty()) return;
 
-    // Accumulate the statement (and its continuation lines) in 'buf'.  A chunk
-    // is run as soon as it compiles AND is not an open builder chain.
     std::string buf = line;
     while (true)
     {
         if (tryRunBuffer(L, buf, false)) return;
 
-        // Need more input (open builder chain or unfinished syntax).
         std::cout << "...> " << std::flush;
         std::string next;
-        if (!std::getline(std::cin, next)) break; // EOF
+        if (!std::getline(std::cin, next)) break; 
         if (!next.empty() && next.back() == '\r') next.pop_back();
 
         if (next == "exit" || next == "quit")
@@ -347,7 +302,6 @@ static void replLine(lua_State* L, const std::string& raw)
 
         if (next.empty())
         {
-            // Blank line: commit whatever has been buffered so far.
             tryRunBuffer(L, buf, true);
             return;
         }
@@ -355,13 +309,8 @@ static void replLine(lua_State* L, const std::string& raw)
         buf += "\n" + next;
     }
 
-    // EOF without a blank line: commit the leftover buffer.
     tryRunBuffer(L, buf, true);
 }
-
-// ---------------------------------------------------------------------------
-// Script runner
-// ---------------------------------------------------------------------------
 
 static bool runScript(lua_State* L, const std::string& path)
 {
@@ -374,7 +323,6 @@ static bool runScript(lua_State* L, const std::string& path)
     return true;
 }
 
-// Extends package.path so the bundled "lua" SDK directory can be required.
 static void extendPackagePath(lua_State* L)
 {
     char exe[MAX_PATH];
@@ -417,7 +365,6 @@ static bool loadSdk(lua_State* L)
     return true;
 }
 
-// Calls a global function with a list of string arguments (for startup messages).
 static void callGlobalStr(lua_State* L, const char* global, const char* fn, int argc, const char* const* argv)
 {
     lua_getglobal(L, global);
@@ -428,10 +375,6 @@ static void callGlobalStr(lua_State* L, const char* global, const char* fn, int 
     for (int i = 0; i < argc; ++i) lua_pushstring(L, argv[i]);
     if (lua_pcall(L, argc, 0, 0) != LUA_OK) reportError(L);
 }
-
-// ---------------------------------------------------------------------------
-// Main
-// ---------------------------------------------------------------------------
 
 static void printBanner()
 {
@@ -468,7 +411,6 @@ int main(int argc, char** argv)
         callGlobalStr(L, "Logger", "info", 4, msgs);
     }
 
-    // --mock enables offline simulation; a positional argument runs a script.
     bool mock = false;
     int start = 1;
     while (start < argc && std::strcmp(argv[start], "--mock") == 0) { mock = true; ++start; }

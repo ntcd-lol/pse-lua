@@ -16,10 +16,6 @@
 
 local M = {}
 
--- ---------------------------------------------------------------------------
--- Resolution helpers
--- ---------------------------------------------------------------------------
-
 local function makeResolver(prefix, map)
     return function(value)
         if type(value) == "number" then return value end
@@ -38,10 +34,6 @@ M.byValue = function(map, value)
     end
     return ("0x%08X"):format(value)
 end
-
--- ---------------------------------------------------------------------------
--- PseCommand
--- ---------------------------------------------------------------------------
 
 local C = {}
 C.GAME                                    = 0x00100000
@@ -107,20 +99,12 @@ C.NONE                                    = 0xFFFFFFFF
 M.COMMAND = C
 M.command = makeResolver("PSE_COMMAND_", C)
 
--- ---------------------------------------------------------------------------
--- PseEvent
--- ---------------------------------------------------------------------------
-
 local E = {}
 E.ELEMENT_CHANGED    = 0x00000000
 E.GAME_TICK_OVERFLOW = 0x00000001
 E.NONE               = 0xFFFFFFFF
 M.EVENT = E
 M.event = makeResolver("PSE_EVENT_", E)
-
--- ---------------------------------------------------------------------------
--- PseResult
--- ---------------------------------------------------------------------------
 
 local R = {}
 R.SUCCESS                        = 0x00000000
@@ -134,10 +118,6 @@ R.ERROR_GAME_NOT_INITIALIZED     = 0x00000007
 R.NONE                           = 0xFFFFFFFF
 M.RESULT = R
 M.result = makeResolver("PSE_RESULT_", R)
-
--- ---------------------------------------------------------------------------
--- PseMesh / PseMaterial / PseClass
--- ---------------------------------------------------------------------------
 
 local MESH = {}
 MESH.PLANE               = 0x0000

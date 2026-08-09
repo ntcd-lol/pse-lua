@@ -46,11 +46,6 @@ namespace
 
     namespace mock
     {
-        // Game-side element storage. Mirrors the PSE_COMMAND_ELEMENT_CREATE
-        // payload layout (docs: reference/enums_h/PseCommand.md) plus a separate
-        // 32-byte register bank (8 x PseRegister):
-        //   transform 0..40, class 40..42 (u2), callback 42..50 (u8),
-        //   state 50 (i1), visibility 51 (i1), registers[] 0..32.
         struct Element
         {
             uint8_t transform[40];
@@ -61,18 +56,16 @@ namespace
             uint8_t registers[32];
         };
 
-        std::unordered_map<uint64_t, Element> world;   // guid -> element
-        std::deque<PseData> events;                    // pending events
+        std::unordered_map<uint64_t, Element> world;   
+        std::deque<PseData> events;                    
         uint64_t nextGuid = 1;
     }
 
-    // Little-endian safe accessors
     static uint32_t rd32(const uint8_t* p) { uint32_t v; std::memcpy(&v, p, 4); return v; }
     static uint64_t rd64(const uint8_t* p) { uint64_t v; std::memcpy(&v, p, 8); return v; }
     static void wr32(uint8_t* p, uint32_t v) { std::memcpy(p, &v, 4); }
     static void wr64(uint8_t* p, uint64_t v) { std::memcpy(p, &v, 8); }
 
-    // Command codes (mirror include/pse/enums.h)
     enum : uint32_t
     {
         CMD_GAME_SET_CHEATS_ENABLED  = 0x00100001,
@@ -119,8 +112,6 @@ namespace
         RESULT_SUCCESS               = 0x00000000,
     };
 
-    // Emits PSE_EVENT_ELEMENT_CHANGED (GUID@0, Callback@8, State@16) when the
-    // element carries a callback, mirroring how the real game reports changes.
     static void emitChanged(uint64_t guid, const mock::Element& e)
     {
         PseData ev{};
@@ -131,7 +122,6 @@ namespace
         mock::events.push_back(ev);
     }
 
-    // Emulates game-side command processing using the documented PseData layouts.
     static PseData mockProcess(const PseData& in)
     {
         PseData out{};
@@ -147,9 +137,6 @@ namespace
 
         switch (cmd)
         {
-        // ------------------------------------------------------------------
-        // Create
-        // ------------------------------------------------------------------
         case CMD_ELEMENT_CREATE:
         {
             mock::Element e{};
@@ -167,8 +154,8 @@ namespace
         {
             mock::Element e{};
             std::memcpy(e.transform, in.data, 40);
-            std::memcpy(e.cls, in.data + 40, 2);        // mesh
-            std::memcpy(e.callback, in.data + 42, 2);   // material
+            std::memcpy(e.cls, in.data + 40, 2);        
+            std::memcpy(e.callback, in.data + 42, 2);   
             e.visibility = static_cast<int8_t>(in.data[44]);
             const uint64_t id = mock::nextGuid++;
             W[id] = e;
@@ -178,9 +165,6 @@ namespace
         case CMD_STATIC_MESH_CREATE:
             break;
 
-        // ------------------------------------------------------------------
-        // Element state
-        // ------------------------------------------------------------------
         case CMD_ELEMENT_SET_STATE:
             if (auto* e = get(guid))
             {
@@ -192,7 +176,6 @@ namespace
             if (auto* e = get(guid)) out.data[0] = static_cast<uint8_t>(e->state);
             break;
 
-        // element visibility
         case CMD_ELEMENT_SET_VISIBILITY:
             if (auto* e = get(guid)) e->visibility = static_cast<int8_t>(in.data[8]);
             break;
@@ -200,7 +183,6 @@ namespace
             if (auto* e = get(guid)) out.data[0] = static_cast<uint8_t>(e->visibility);
             break;
 
-        // element transform
         case CMD_ELEMENT_SET_TRANSFORM:
             if (auto* e = get(guid)) std::memcpy(e->transform, in.data + 8, 40);
             break;
@@ -208,7 +190,6 @@ namespace
             if (auto* e = get(guid)) std::memcpy(out.data, e->transform, 40);
             break;
 
-        // element class
         case CMD_ELEMENT_SET_CLASS:
             if (auto* e = get(guid)) std::memcpy(e->cls, in.data + 8, 2);
             break;
@@ -216,7 +197,6 @@ namespace
             if (auto* e = get(guid)) std::memcpy(out.data, e->cls, 2);
             break;
 
-        // element callback
         case CMD_ELEMENT_SET_CALLBACK:
             if (auto* e = get(guid)) std::memcpy(e->callback, in.data + 8, 8);
             break;
@@ -224,7 +204,6 @@ namespace
             if (auto* e = get(guid)) std::memcpy(out.data, e->callback, 8);
             break;
 
-        // registers
         case CMD_ELEMENT_SET_REGISTER:
             if (auto* e = get(guid))
             {
@@ -270,9 +249,6 @@ namespace
             W.erase(guid);
             break;
 
-        // ------------------------------------------------------------------
-        // Dynamic mesh (shares the Element storage; cls=mesh, callback=material)
-        // ------------------------------------------------------------------
         case CMD_DYNAMIC_MESH_SET_MATERIAL:
             if (auto* e = get(guid)) std::memcpy(e->callback, in.data + 8, 2);
             break;
@@ -295,7 +271,6 @@ namespace
             W.erase(guid);
             break;
 
-        // Game / Player / Solver Gun / Flashlight: success, GETs return zeros.
         default:
             break;
         }
@@ -313,8 +288,6 @@ namespace
         const char* payload = luaL_checklstring(L, index, &len);
         std::memcpy(outData, payload, len < 60 ? len : 60);
     }
-
-    // -----------------------------------------------------------------------
 
     int l_initialize(lua_State* L)
     {
@@ -419,7 +392,6 @@ namespace
         return 2;
     }
 
-    // Injects a game event into the mock queue (only meaningful in mock mode).
     int l_mock_emit(lua_State* L)
     {
         uint32_t h = static_cast<uint32_t>(luaL_checkinteger(L, 1));

@@ -17,10 +17,6 @@
 
 local M = {}
 
--- ---------------------------------------------------------------------------
--- Bit math (u32 registers)
--- ---------------------------------------------------------------------------
-
 function M.getBit(reg, offset)
     return (reg >> offset) & 1
 end
@@ -29,26 +25,17 @@ function M.setBit(reg, offset, value)
     return (reg & ~(1 << offset)) | ((value & 1) << offset)
 end
 
--- Reads a bit field of count bits (1..32) at bit offset.
 function M.getBits(reg, offset, count)
     if count == 32 then return (reg & 0xFFFFFFFF) end
     local mask = (1 << count) - 1
     return (reg >> offset) & mask
 end
 
--- Writes a bit field of count bits at bit offset, returns the new register.
 function M.setBits(reg, offset, count, value)
     if count == 32 then return value & 0xFFFFFFFF end
     local mask = (1 << count) - 1
     return (reg & ~(mask << offset)) | ((value & mask) << offset)
 end
-
--- ---------------------------------------------------------------------------
--- Per-class register layouts (from docs/ru/concept/elements.md)
---   layout[class] = { regIndex -> descriptor }
---   descriptor: { name, bits = { {fieldName, bitOffset, bitCount}, ... },
---                 rgb = true | pair = { "X", "Y" } | rgbOnly = true }
--- ---------------------------------------------------------------------------
 
 local RGB = { rgb = true }
 local RGB_ONLY = { rgb = true, only = true }
@@ -182,20 +169,13 @@ M.LAYOUT = {
     SOLVER_GUN_PEDESTAL = {},
 }
 
--- Aliases: elevator registers are identical to Door
 M.LAYOUT.ENTRY_ELEVATOR = M.LAYOUT.DOOR
 M.LAYOUT.EXIT_ELEVATOR = M.LAYOUT.DOOR
 
--- ---------------------------------------------------------------------------
--- High-level helpers
--- ---------------------------------------------------------------------------
-
--- Returns the layout (table of regIndex -> descriptor) for a class name.
 function M.layout(class)
     return M.LAYOUT[class]
 end
 
--- Builds a register value from named fields (fields = { fieldName = value, ... }).
 function M.build(class, regIndex, fields)
     local desc = M.LAYOUT[class]
     if not desc then return 0 end
@@ -217,7 +197,6 @@ function M.build(class, regIndex, fields)
     return reg
 end
 
--- Reads named fields from a register value.
 function M.extract(class, regIndex, reg)
     local desc = M.LAYOUT[class]
     if not desc then return { raw = reg } end
@@ -235,7 +214,6 @@ function M.extract(class, regIndex, reg)
     return out
 end
 
--- Convenience color pack/unpack: RRGGBB in bits 8..23 (per docs), i.e. R<<16|G<<8|B.
 function M.packRgb(r, g, b)
     return ((r & 0xFF) << 16) | ((g & 0xFF) << 8) | (b & 0xFF)
 end
@@ -244,7 +222,6 @@ function M.unpackRgb(v)
     return (v >> 16) & 0xFF, (v >> 8) & 0xFF, v & 0xFF
 end
 
--- Standard palette (Portal style)
 M.COLORS = {
     white = M.packRgb(255, 255, 255),
     black = M.packRgb(0, 0, 0),

@@ -23,7 +23,6 @@ local SPEED_2 = 1.5
 local FRAMES = 60
 local FRAME_MS = 50
 
--- HSV -> RGB floats (h in [0, 6), s, v in [0, 1])
 local function hsvToRgb(h, s, v)
     local i = math.floor(h % 6)
     local f = h - math.floor(h)
@@ -41,7 +40,6 @@ local function hsvToRgb(h, s, v)
     return r, g, b
 end
 
--- 1. Big black floor, 24x24, far below
 PSE.createMeshObject()
     :geometry("FACE")
     :texture("FLOOR_BLACK")
@@ -49,7 +47,6 @@ PSE.createMeshObject()
     :position(0, 0, -1600)
     :create()
 
--- 2. Small invisible floor
 PSE.createMeshObject()
     :geometry("FACE")
     :texture("FLOOR_BLACK")
@@ -58,10 +55,8 @@ PSE.createMeshObject()
     :visible(false)
     :create()
 
--- 3. Take the solver gun away
 PSE.setSolverGunEnabled(false)
 
--- 4. Create 24 laser emitters with HSV colors in register [1]
 local lasers = {}
 for i = 0, N - 1 do
     local r, g, b = hsvToRgb(6 * i / N, 1, 1)
@@ -74,7 +69,6 @@ for i = 0, N - 1 do
 end
 Logger.info("MAIN", "created %d laser emitters", N)
 
--- 5. Animate: epicyclic motion, fire-and-forget pushes, one sync per frame
 for frame = 0, FRAMES - 1 do
     local t = frame * FRAME_MS / 1000
     for i = 0, N - 1 do

@@ -26,7 +26,6 @@ local FMT = {
     i8 = "i8", u8 = "I8", f4 = "f",
 }
 
--- Returns a fresh, zeroed 60-byte payload.
 function Pack.new()
     return ("\0"):rep(Pack.SIZE)
 end
@@ -44,11 +43,6 @@ local function splitAt(buf, offset, written)
     return buf:sub(1, offset), buf:sub(offset + 1 + written)
 end
 
--- ---------------------------------------------------------------------------
--- GUID helpers
--- ---------------------------------------------------------------------------
-
--- Converts number | hex string | 8-byte string to a little-endian 8-byte string.
 local function guidToBytes(v)
     if type(v) == "string" then
         if #v == 8 then return v end
@@ -70,16 +64,11 @@ local function guidToBytes(v)
     return string.pack("<I4I4", lo, hi)
 end
 
--- Converts little-endian 8-byte string to number (if it fits) or hex string.
 local function bytesToGuid(b)
     local lo, hi = string.unpack("<I4I4", b)
     if hi == 0 then return lo end
     return ("%08x%08x"):format(hi, lo)
 end
-
--- ---------------------------------------------------------------------------
--- Scalar + composite
--- ---------------------------------------------------------------------------
 
 local function setScalar(buf, offset, type, value)
     local s = string.pack("<" .. FMT[type], value)
@@ -99,7 +88,6 @@ local function axis4(v)
     return v[1] or v.x or 0, v[2] or v.y or 0, v[3] or v.z or 0, v[4] or v.w or 1
 end
 
--- Writes a value into a copy of buf at the given offset and returns the new string.
 function Pack.set(buf, offset, type, value)
     if type.type then
         local count, base = type.count, type.type
@@ -137,7 +125,6 @@ function Pack.set(buf, offset, type, value)
     return setScalar(buf, offset, type, value)
 end
 
--- Reads a value from buf at the given offset.
 function Pack.get(buf, offset, type)
     if type.type then
         local count, base = type.count, type.type
