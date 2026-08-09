@@ -21,6 +21,7 @@
 
 ```cmd
 bin\pse_lua.exe
+
 # Или в режиме MOCK:
 bin\pse_lua.exe --mock
 ```

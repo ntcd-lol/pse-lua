@@ -13,10 +13,13 @@
 ### Сборка
 
 **Windows** (MSVC Build Tools (желательно 2022) (Desktop development with C++)):
+
 ```cmd
 powershell -ExecutionPolicy Bypass -File build.ps1
 ```
+
 ИЛИ
+
 ```cmd
 cmake -S . -B build -A x64
 cmake --build build --config Release
