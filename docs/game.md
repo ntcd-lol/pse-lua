@@ -71,45 +71,6 @@ local g = PSE.game:getGravity()
 Logger.info("MAIN", "gravity = %.1f", g)
 ```
 
-## Игрок
-
-### `PSE.player:setPosition(x, y, z)`
-
-Телепортирует игрока в указанную точку:
-
-```lua
-PSE.player:setPosition(0, 0, 0)
-```
-
-### `PSE.player:getPosition()`
-
-Возвращает позицию игрока как `{ x, y, z }`:
-
-```lua
-local pos = PSE.player:getPosition()
-Logger.info("MAIN", "player at %.1f %.1f %.1f", pos[1], pos[2], pos[3])
-```
-
-### `PSE.player:setRotation(x, y, z, w)`
-
-Задаёт поворот камеры игрока кватернионом. Удобно строить через `PSE.deg(pitch, yaw, roll)`:
-
-```lua
-PSE.player:setRotation(PSE.deg(0, 90, 0))
-```
-
-### `PSE.player:getRotation()`
-
-Возвращает поворот камеры игрока как `{ x, y, z, w }` (кватернион).
-
-### `PSE.player:spawn()`
-
-Возрождает игрока в точке спавна.
-
-### `PSE.player:kill()`
-
-Убивает игрока.
-
 ## Fluent-цепочки
 
 Методы можно объединять в цепочку — каждый возвращает себя, поэтому порядок не важен:
