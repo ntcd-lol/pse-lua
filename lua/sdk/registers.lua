@@ -4,15 +4,8 @@
 --- \- Comment: :3
 --- '-=#####=-'
 --- ^         ^
---- Как это работает:
---- * Битовые операции над u32-регистрами: getBit/setBit/getBits/setBits.
----   Бит-строка в docs/ru/concept/elements.md читается справа налево:
----   самый правый символ = бит 0.
---- * Раскладки регистров по классам: M.LAYOUT[class] = { reg -> descr }.
---- * Цвета: биты 8..23 как RRGGBB ("________RRRRRRRRGGGGGGGGBBBBBBBB"),
----   т.е. value = R<<16 | G<<8 | B (M.packRgb / M.unpackRgb).
---- * build(class, tbl): применяет поля из tbl к регистрам и возвращает
----   готовый массив из 8 регистров для команды ELEMENT_SET_ALL_REGISTERS.
+--- u32 register bit ops (getBit/setBit/getBits/setBits), per-class
+--- register layouts and RGB color packing (bits 8..23 as RRGGBB).
 --- --==-==--
 
 local M = {}

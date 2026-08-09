@@ -4,18 +4,8 @@
 --- \- Comment: :3
 --- '-=#####=-'
 --- ^         ^
---- Как это работает:
---- * Главный API SDK: глобальная таблица PSE (доступна после sdk.init).
---- * Fluent-конструкторы элементов и мешей: PSE.createDoor()
----   :position(...):state(1):create() -> объект-элемент с методами
----   setState/getState/setRegister/getRegister/destroy...
---- * Резолверы имён: PSE.names.class("BUTTON"), PSE.names.mesh("FACE"),
----   PSE.names.material("WALL_WHITE_SMALL") - по sdk.enums.
---- * Реестр: PSE.get(name) / PSE.get(guid) - поиск созданных элементов.
---- * События: PSE.on(PSE.Event.ELEMENT_CHANGED, fn), PSE.poll() и
----   PSE.run(duration) - цикл опроса очереди событий хоста.
---- * Мок-хелперы (только --mock): PSE.mock.emit / PSE.mock.emitRaw.
---- * Утилиты: PSE.vec/PSE.quat/PSE.deg/PSE.color/PSE.sleep.
+--- Main SDK API: global PSE table with fluent element/mesh factories,
+--- name resolvers, element registry, events, mock helpers and utilities.
 --- --==-==--
 
 local Enums = require("sdk.enums")

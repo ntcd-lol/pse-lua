@@ -4,18 +4,8 @@
 --- \- Comment: :3
 --- '-=#####=-'
 --- ^         ^
---- Как это работает:
---- * Обёртка над C-мостом "core" (предоставляется хостом/main.cpp).
---- * call(): декларативный вызов команд из sdk.schema - упаковывает
----   входные поля через sdk.pack, создаёт PseData, вызывает C-сторону,
----   распаковывает выходные поля.
---- * push_and_wait(): синхронный вызов с ожиданием результата (C).
---- * poll(): берёт событие из очереди хоста и декодирует его в таблицу
----   { header, guid, callback, state, data } через sdk.pack.
---- * invokeCallback(): защищённый вызов Lua-колбэка через xpcall
----   с печатью полного traceback при ошибке.
---- * Реестр колбэков: функция Lua <-> opaque u64 id (для поля callback).
---- * Делегирует в C: initialize/deinitialize/synchronize/millis/sleep.
+--- Wrapper over the C "core" bridge (provided by the host): declarative
+--- calls via sdk.schema, event polling, callback registry and mock support.
 --- --==-==--
 
 local Enums = require("sdk.enums")

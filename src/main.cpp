@@ -4,16 +4,9 @@
 // \- Comment: :3
 // '-=#####=-'
 // ^         ^
-// Как это работает:
-// * Создаёт Lua-состояние 5.4, открывает стандартные библиотеки,
-//   регистрирует C-мост "core" (pse_bridge + lua_core) и подгружает
-//   Lua-SDK через require("sdk.init") -> глобальные PSE / pse / Logger.
-// * Флаг --mock переключает мост в офлайн-режим (эмуляция игры, без pse.dll).
-// * Первый позиционный аргумент исполняется как Lua-скрипт
-//   (luaL_loadfile + runChunkOnTop); без аргументов открывается REPL:
-//   строки пробуются как операторы, затем как "return <выражение>",
-//   затем как многострочная конструкция (продолжение до закрывающего токена).
-// * При выходе корректно завершает сессию: PSE.deinitialize() и выгрузка pse.dll.
+// Host: creates a Lua 5.4 state, registers the "core" C bridge and
+// loads the SDK via require("sdk.init"). --mock enables offline emulation;
+// the first positional argument runs a Lua script, otherwise a REPL opens.
 // --==-==--
 
 #include <Windows.h>

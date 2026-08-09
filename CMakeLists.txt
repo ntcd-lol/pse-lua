@@ -4,15 +4,16 @@
 # \- Comment: :3
 # '-=#####=-'
 #
-# Сборка C++-моста (src/pse_bridge.cpp + src/lua_core.cpp) и интерпретатора.
+# Builds the C++ bridge (src/pse_bridge.cpp + src/lua_core.cpp) and the
+# interpreter (host + bundled Lua 5.4.8).
 #
 #   cmake -S . -B build -G "Visual Studio 17 2022" -A x64
 #   cmake --build build --config Release
 #   build\bin\pse_lua.exe --mock examples\hello.lua
 #
-# Опции:
-#   PSE_LUA_USE_SYSTEM_LUA  - использовать системный Lua вместо third_party (OFF)
-#   PSE_LUA_COPY_SDK        - копировать lua/ и examples/ рядом с exe (ON)
+# Options:
+#   PSE_LUA_USE_SYSTEM_LUA  - use a system-installed Lua instead of third_party (OFF)
+#   PSE_LUA_COPY_SDK        - copy lua/ and examples/ next to the exe (ON)
 # --==-==--
 
 cmake_minimum_required(VERSION 3.16)
@@ -47,7 +48,7 @@ else()
 endif()
 
 # ---------------------------------------------------------------------------
-# C++-мост: Lua <-> pse.dll (переиспользуемая статическая библиотека)
+# C++ bridge: Lua <-> pse.dll (reusable static library)
 # ---------------------------------------------------------------------------
 add_library(pse_lua_bridge STATIC
     src/pse_bridge.cpp
@@ -63,7 +64,7 @@ if(PSE_LUA_USE_SYSTEM_LUA)
 endif()
 
 # ---------------------------------------------------------------------------
-# Интерпретатор (точка входа + встроенный Lua)
+# Interpreter (entry point + bundled Lua)
 # ---------------------------------------------------------------------------
 add_executable(pse_lua
     src/main.cpp
@@ -82,7 +83,7 @@ if(MSVC)
 endif()
 
 # ---------------------------------------------------------------------------
-# Копируем SDK и примеры рядом с exe, чтобы работали запуски из build\bin
+# Copy the SDK and examples next to the exe so runs from build\bin work
 # ---------------------------------------------------------------------------
 if(PSE_LUA_COPY_SDK)
     add_custom_command(TARGET pse_lua POST_BUILD

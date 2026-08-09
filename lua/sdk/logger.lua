@@ -4,15 +4,7 @@
 --- \- Comment: :3
 --- '-=#####=-'
 --- ^         ^
---- Как это работает:
---- * Удобный логгер с форматом:  :DD:HH:MM:SS.MSS [LEVEL] (TAG) >>> message
---- * Уровни: DEBUG < INFO < WARNING < ERROR < CRITICAL (Logger.setLevel).
---- * Тег источника: Logger.setTag("Name") либо передача тега в вызове.
---- * Форматирование сообщений через string.format (Logger.info(fmt, ...)).
---- * Цвета/шрифты: ANSI 256-цвета + spec-коды &CD<hh><s>& (hh = цвет 0-255,
----   s = стиль 0 обычный / 1 жирный / 2 курсив / 3 подчёркнутый),
----   сброс встроенным &R&.
---- * Опциональная запись в файл (Logger.setFile) и палитра PALETTE.
+--- Logger: timestamp/level/tag formatting, ANSI colors and optional file output.
 --- --==-==--
 
 local core = _G.core

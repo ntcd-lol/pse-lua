@@ -4,18 +4,9 @@
 // \- Comment: :3
 // '-=#####=-'
 // ^         ^
-// Как это работает:
-// * Экспортирует в Lua таблицу "core" (C API): push / push_and_wait /
-//   poll_event / mock_emit / set_mock / initialize / deinitialize /
-//   synchronize / millis / sleep - поверх pse.dll (pse_bridge) или мока.
-// * В режиме мока (gMock) хранит эмулятор мира: mock::Element с раскладкой
-//   ELEMENT_CREATE (transform@0, class@40, callback@42, state@50,
-//   visibility@51) + 8 x PseRegister, генерирует GUID начиная с 1 и
-//   обрабатывает все команды из sdk/schema.lua.
-// * Авто-эмиссия PSE_EVENT_ELEMENT_CHANGED (guid@0, callback@8, state@16)
-//   при изменении state у элемента с ненулевым callback; события
-//   складываются в очередь mock::events и читаются через poll_event.
-// * В живом режиме те же вызовы транслируются в экспорты pse.dll.
+// Exports the "core" table to Lua (push / push_and_wait / poll_event /
+// mock_emit / set_mock / initialize / deinitialize / synchronize / millis /
+// sleep) over pse.dll (pse_bridge) or the mock world emulator.
 // --==-==--
 
 #include <Windows.h>

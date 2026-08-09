@@ -4,11 +4,8 @@
 --- \- Comment: :3
 --- '-=#####=-'
 --- ^         ^
---- Как это работает:
---- * Точка входа Lua-SDK: вызывается хостом через require("sdk.init").
---- * Грузит sdk.api (и вместе с ним весь SDK), выставляет глобальные
----   PSE / pse (таблица API) и Logger (удобный логгер).
---- * Инициализирует логгер и возвращает PSE вызывающей стороне.
+--- SDK entry point (loaded by the host): loads sdk.api and exposes
+--- the global PSE / pse and Logger tables.
 --- --==-==--
 
 local PSE = require("sdk.api")

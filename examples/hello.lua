@@ -4,13 +4,7 @@
 --- \- Comment: :3
 --- '-=#####=-'
 --- ^         ^
---- Как это работает:
---- * Классический первый скрипт: создаёт пол (dynamic mesh FACE/FLOOR_WHITE)
----   и дверь (class DOOR), затем round-trip проверяет состояние/позицию.
---- * Демонстрирует fluent-стиль PSE.createMeshObject():geometry(...)
----   :texture(...):scale(...):position(...):create().
---- * Читает обратно state/transform/регистры созданных объектов.
---- * Запуск:  bin\pse_lua.exe --mock examples\hello.lua
+--- Hello-world: mesh floor + door, then round-trip state/transform/registers.
 --- --==-==--
 
 Logger.info("MAIN", "hello, PSE SDK Lua!")

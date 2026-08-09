@@ -4,20 +4,11 @@
 --- \- Comment: :3
 --- '-=#####=-'
 --- ^         ^
---- Как это работает:
---- * Порт example/01_FunnyButtonAndEventHandle: кнопка BUTTON переключает
----   дверь DOOR через колбэк события PSE_EVENT_ELEMENT_CHANGED.
---- * В Portal: Solver кнопка НЕ связана с дверью нативно — нативной "проводки"
----   в игре нет. Единственный механизм связи — Callback Ping: при нажатии хост
----   шлёт PSE_EVENT_ELEMENT_CHANGED с нашим callback-адресом, sdk.core вызывает
----   Lua-колбэк, который дергает дверь и лампу через setState.
---- * Визуальная "обвязка": дверь с битом C регистра [0] подсвечивается зелёным
----   при Callback Ping'е; рядом с кнопкой стоит лампа, горящая при нажатии.
---- * Процесс висит бесконечно (PSE.run() без таймаута) и обрабатывает нажатия,
----   пока его не закроют (Ctrl+C). Короткий PSE.run(10) раньше завершал SDK
----   раньше, чем игрок успевал дойти до кнопки.
---- * Запуск (live):  bin\pse_lua.exe examples\button.lua
----   Запуск (mock):  bin\pse_lua.exe --mock examples\button.lua
+--- Button -> door/lamp via the ELEMENT_CHANGED callback (Callback Ping).
+--- The session stays alive (PSE.run without timeout) so the player has time
+--- to reach the button.
+--- Run (live):  bin\pse_lua.exe examples\button.lua
+--- Run (mock):  bin\pse_lua.exe --mock examples\button.lua
 --- --==-==--
 
 Logger.info("MAIN", "button + door demo")

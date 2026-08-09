@@ -4,14 +4,7 @@
 --- \- Comment: :3
 --- '-=#####=-'
 --- ^         ^
---- Как это работает:
---- * Числовые константы, зеркалящие include/pse/enums.h и
----   docs/ru/reference/enums_h/PseCommand.md.
---- * Пространства: COMMAND (PseCommand), EVENT (PseEvent), RESULT (PseResult),
----   MESH (PseMesh), MATERIAL (PseMaterial), CLASS (PseClass).
---- * Резолверы по имени: M.mesh("FACE"), M.class("BUTTON") и т.п. -
----   принимают "FACE", "PSE_MESH_FACE", а также числа (как есть).
---- * byValue(map, value): имя по числу или hex-строка 0x%08X.
+--- Numeric constants mirroring include/pse/enums.h, with name resolvers.
 --- --==-==--
 
 local M = {}

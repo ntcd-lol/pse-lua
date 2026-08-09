@@ -4,13 +4,11 @@
 # \- Comment: :3
 # '-=#####=-'
 # ^         ^
-# Как это работает:
-# * Эталонная сборка под Windows (PowerShell 5.1+).
-# * Стажирует исходники в ASCII-временную папку %TEMP%\pse_build
-#   (обходит проблемы с пробелами и не-ASCII путями проекта).
-# * Компилирует встроенный Lua 5.4.8 + C++ хост (main/lua_core/pse_bridge)
-#   через MSVC (vcvars64), копирует бинарник в <repo>\bin\pse_lua.exe.
-# * Запуск:  powershell -ExecutionPolicy Bypass -File build.ps1
+# Canonical Windows build (PowerShell 5.1+). Stages sources into an ASCII
+# temp dir %TEMP%\pse_build (avoids spaces / non-ASCII project paths), then
+# compiles bundled Lua 5.4.8 + the C++ host via MSVC (vcvars64) and copies
+# the binary to <repo>\bin\pse_lua.exe.
+# Run:  powershell -ExecutionPolicy Bypass -File build.ps1
 # --==-==--
 
 $ErrorActionPreference = "Stop"

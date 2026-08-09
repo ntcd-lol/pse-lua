@@ -4,16 +4,8 @@
 // \- Comment: :3
 // '-=#####=-'
 // ^         ^
-// Как это работает:
-// * Динамически загружает pse.dll через LoadLibraryA и резолвит экспорты:
-//   pseInitializeBuffers / pseDeinitializeBuffers / pseCommandBufferSynchronize /
-//   pseCommandBufferSinglePush / pseCommandBufferSinglePushAndWait /
-//   pseEventBufferTryGet.
-// * Поиск DLL: переменная PSE_DLL, рядом с exe, текущий каталог и несколько
-//   шагов вверх по дереву (проект лежит в ...\PSE SDK Lua\pse-lua, DLL в корне).
-// * Каждый экспорт обёрнут в нуль-безопасный вызов (если функция не найдена -
-//   вызов игнорируется). PseData передаётся как alignas(64) header + data[60].
-// * В mock-режиме эти функции не используются - lua_core эмулирует команды.
+// Dynamically loads pse.dll (LoadLibraryA) and resolves its exports
+// with null-safe calls; mock mode bypasses the DLL entirely.
 // --==-==--
 
 #include "pse_bridge.h"

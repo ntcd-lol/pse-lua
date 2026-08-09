@@ -4,11 +4,7 @@
 // \- Comment: :3
 // '-=#####=-'
 // ^         ^
-// Как это работает:
-// * Заголовок C-моста между встроенным Lua и pse.dll.
-// * Декларирует регистрацию таблицы "core" и тонкие обёртки над
-//   C-экспортами PSE SDK (буферы команд/событий, millis).
-// * setMock() переключает реализацию на офлайн-эмуляцию (см. lua_core.cpp).
+// Header of the C bridge between the embedded Lua and pse.dll.
 // --==-==--
 
 #pragma once

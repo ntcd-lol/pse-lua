@@ -4,17 +4,8 @@
 --- \- Comment: :3
 --- '-=#####=-'
 --- ^         ^
---- Как это работает:
---- * Упаковка/распаковка 60-байтного PseData через string.pack
----   (little-endian), совместимо с C-раскладкой include/pse/structures.h.
---- * Типы: i1 u1 i2 u2 i4 u4 i8 u8 f4 | vec3 quat transform guid
----   и массивы: { "u4", 8 } (последовательные элементы).
---- * vec3 = 3 x f4 (12 байт), quat = 4 x f4 (16), transform = 10 x f4 (40),
----   guid = 8 байт (u32 lo + u32 hi), всё без выравнивания.
---- * GUID не влезает в double (2^53): числа > 2^53 не поддерживаются,
----   поэтому guid принимает {lo, hi}, 16-значную hex-строку или число.
---- * Поля записываются на свои смещения независимо от порядка (set),
----   чтение - по маске (get), хвост после последнего поля остаётся нулями.
+--- PseData (60 bytes) pack/unpack via string.pack (little-endian),
+--- matching the C layout in include/pse/structures.h.
 --- --==-==--
 
 local Pack = {}

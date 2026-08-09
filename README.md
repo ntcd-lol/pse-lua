@@ -12,16 +12,18 @@
 ### Сборка
 
 **Windows** (MSVC Build Tools (желательно 2022) (Desktop development with C++)):
-```bat
+```cmd
 powershell -ExecutionPolicy Bypass -File build.ps1
 ```
-
-**Linux/MacOS**:
-
-```bash
+ИЛИ
+```cmd
 cmake -S . -B build -A x64
 cmake --build build --config Release
 ```
+**Linux/MacOS**:
+
+> [!IMPORTANT]
+> К сожалению, PSE SDK Lua, а так же Portal: Solver не поддерживают Linux/MacOS из-за использования Windows API - Shared Memory. Используйте эмуляторы.
 
 ### Документация
 

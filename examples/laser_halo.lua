@@ -4,15 +4,7 @@
 --- \- Comment: :3
 --- '-=#####=-'
 --- ^         ^
---- Как это работает:
---- * Порт example/02_LaserHalo: кольцо из 24 излучателей LASER_TX
----   с HSV-цветами и анимированными эпициклическими позициями.
---- * В каждом кадре позиция каждого лазера = R1*cos(t) + R2*cos(2t) и т.п.
----   (две окружности, "эпицикл"), цвет плавно бежит по HSV-кругу.
---- * Цвета упаковываются по раскладке "________RRRRRRRRGGGGGGGGBBBBBBBB",
----   т.е. PSE.color(r, g, b) = R<<16 | G<<8 | B (см. sdk/registers.lua).
---- * Состояние обновляется через PSE.run(FRAME_MS, hook) - цикл опроса.
---- * Запуск:  bin\pse_lua.exe --mock examples\laser_halo.lua
+--- Animated laser ring: 24 LASER_TX emitters with HSV colors (port of 02_LaserHalo).
 --- --==-==--
 
 local N = 24

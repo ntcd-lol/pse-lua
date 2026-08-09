@@ -4,14 +4,7 @@
 --- \- Comment: :3
 --- '-=#####=-'
 --- ^         ^
---- Как это работает:
---- * Инициализация сессии и подключение к запущенной игре Portal: Solver.
---- * PSE.initialize() = pseInitializeBuffers (открывает shared memory).
---- * Пример round-trip: GAME_INITIALIZE -> проверка GAME_CHECK_GUID_IS_VALID,
----   чтение версии/гравитации, создание элемента и регистров.
---- * В --mock режиме всё эмулируется офлайн, без игры.
---- * Запуск (live):  bin\pse_lua.exe examples\init.lua
----   Запуск (mock):  bin\pse_lua.exe --mock examples\init.lua
+--- Full session cycle: initialize -> GAME_INITIALIZE -> round-trip -> deinitialize.
 --- --==-==--
 
 Logger.info("MAIN", "PSE SDK Lua %s session init", PSE.version)
