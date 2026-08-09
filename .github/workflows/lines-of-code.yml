@@ -18,7 +18,7 @@ jobs:
         with:
           directory: './'
           badge: './badges/lines.svg'
-          ignore: 'third-party'
+          ignore: 'third_party'
 
       - name: Commit and Push Badge File
         run: |
