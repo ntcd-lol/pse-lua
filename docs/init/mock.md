@@ -55,16 +55,16 @@ _* - см. в [Инициализация -> REPL](/docs/init/repl.md)_
 
 <div align="center">
 
-<table>
+<table width="100%">
   <tr>
-    <td align="left">
+    <td align="left" width="45%">
       <a href="/docs/init/index.md">← Назад: Инициализация</a>
     </td>
-    <td width="100">&nbsp;</td>
-    <td align="right">
+    <td align="center" width="10%">
+      &nbsp;
+    </td>
+    <td align="right" width="45%">
       <a href="/docs/init/repl.md">Далее: REPL →</a>
     </td>
   </tr>
 </table>
-
-</div>
