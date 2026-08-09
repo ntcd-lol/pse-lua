@@ -53,4 +53,5 @@ PSE.mock.emit("my_button", 1) --- Активация кнопки
 
 _* - см. в [Инициализация -> REPL](/docs/init/repl.md)_
 
-[← Назад: Инициализация](/docs/init/index.md) &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; [Далее: REPL →](/docs/init/repl.md)
+<p align="left"><a href="/docs/init/index.md">← Назад: Инициализация</a></p>
+<p align="right"><a href="/docs/init/repl.md">Далее: REPL →</a></p>
