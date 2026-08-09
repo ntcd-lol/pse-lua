@@ -31,3 +31,7 @@ PSE.initializeGame()
 ### `PSE.deinitialize()`
 
 Несмотря на то, что даже прервав код с помощью Ctrl+C с игрой ничего страшного не произойдет, но Shared Memory может остаться не закрытой, из-за чего лучше использовать стандартный метод `PSE.deinitialize()`.
+
+---
+
+[<- Назад: README](/README.md) | [Далее: MOCK-режим ->](/docs/init/mock.md)
