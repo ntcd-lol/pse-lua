@@ -17,7 +17,7 @@ jobs:
         uses: shadowmoose/GHA-LoC-Badge@1.0.0
         with:
           directory: './'
-          badge: './badges/lines.json' # Путь, куда сохранится JSON
+          badge: './badges/lines.svg' # Путь, куда сохранится JSON
 
       - name: Commit and Push Badge File
         run: |
