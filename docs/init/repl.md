@@ -29,7 +29,7 @@
 
 ```bash
   [bridge] pse.dll loaded: path/to/pse.dll
-:09:15:58:08.961 [INFO] (PSE) >>> PSE SDK Lua 0.1.0 loaded (pse.dll: path/to/pse.dll)
+:DD:HH:MM:SS.MSS [INFO] (PSE) >>> PSE SDK Lua 0.1.0 loaded (pse.dll: path/to/pse.dll)
 
   .-=:[ PSE SDK Lua ]:=-.   simplified PSE SDK + interpreter
   version 0.1.0   (embedded Lua 5.4, pse.dll via dynamic load)
