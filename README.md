@@ -4,9 +4,11 @@
 
 ---
 
-### Что это:
-Это обвязка Fluent API поверх оригинального [PSE SDK](https://github.com/RootTool0/pse-sdk), чтобы облегчить создание уровней и логики. Используется Lua 5.4 Embedded для того, чтобы
+> [!NOTE]
+> Это обвязка Fluent API поверх оригинального [PSE SDK](https://github.com/RootTool0/pse-sdk), чтобы облегчить создание уровней и логики. Используется Lua 5.4 Embedded.
 
+> [!IMPORTANT]
+> PSE SDK Lua еще стабилен не полностью, будет приятно ждать issue!
 ### Сборка
 
 **Windows** (MSVC Build Tools (желательно 2022) (Desktop development with C++)):
