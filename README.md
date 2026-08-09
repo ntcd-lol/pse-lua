@@ -34,4 +34,16 @@ cmake --build build --config Release
  - События
  - Регистры
 
-[Далее: Инициализация ->](/docs/init/index.md)
+<table width="100%">
+  <tr>
+    <td align="left" width="45%">
+      <a href="#">← Назад: ---</p>
+    </td>
+    <td align="center" width="10%">
+      &nbsp;
+    </td>
+    <td align="right" width="45%">
+      <a href="/docs/init/index.md">Далее: Инициализация →</a>
+    </td>
+  </tr>
+</table>
