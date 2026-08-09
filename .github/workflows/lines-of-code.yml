@@ -1,29 +1,36 @@
-name: Generate Lines of Code Badge
+name: Update LOC Badge
+
 on:
   push:
     branches:
-      - main
+      - main # Замените на вашу ветку по умолчанию
 
 jobs:
-  badge:
+  update-badge:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Count Lines and Generate JSON
-        uses: shadowmoose/GHA-LoC-Badge@1.0.0
-        with:
-          directory: './'
-          badge: './badges/lines.svg'
-          ignore: 'third_party'
+      # 1. Установка утилиты cloc для подсчета строк кода
+      - name: Install cloc
+        run: sudo apt-get update && sudo apt-get install -y cloc
 
-      - name: Commit and Push Badge File
+      # 2. Подсчет строк кода и сохранение в переменную окружения
+      - name: Calculate LOC
         run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add ./badges/lines.svg
-          git commit -m "Update lines of code badge" || exit 0
-          git push
+          # cloc считает только строки самого кода, исключая пустые строки и комментарии
+          # --json выводит структурированные данные, jq забирает итоговое число строк (code)
+          LOC=$(cloc . --json | jq '.SUM.code')
+          echo "LOC_COUNT=$LOC" >> $GITHUB_ENV
+
+      # 3. Генерация и загрузка JSON для Shields.io в Gist
+      - name: Create Dynamic Badge JSON
+        uses: schneegans/dynamic-badges-action@v1.9.0
+        with:
+          auth: ${{ secrets.GIST_SECRET }}
+          gistID: ca292094533edaf22a89d670e2add825
+          filename: loc.json
+          label: Lines of Code
+          message: ${{ env.LOC_COUNT }}
+          color: blue

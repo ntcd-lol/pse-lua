@@ -3,7 +3,7 @@
 ![PSE SDK Lua](docs/content/banner.png)
 
 <div align="center">
-  <img alt="Commits" src="https://img.shields.io/github/commit-activity/m/ntcd-lol/pse-lua">
+  <img alt="Commits" src="https://img.shields.io/github/commit-activity/m/ntcd-lol/pse-lua?style=for-the-badge">
   <img alt="Lines of Code" src="/badges/lines.svg">
 </div>
 
