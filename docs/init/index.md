@@ -2,7 +2,7 @@
     <thead>
         <tr>
             <td align="left"><img src="/docs/content/cube.png" alt="Cube" width="120"/></td>
-            <td align="right" style="white-space: nowrap;" width="100%">Документация -> Инициализация</td>
+            <td align="right" style="white-space: nowrap;" width="90%">Документация -> Инициализация</td>
         </tr>
     </thead>
 </table>
