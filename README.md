@@ -4,7 +4,7 @@
 
 <div align="center">
   <img alt="Commits" src="https://img.shields.io/github/commit-activity/m/ntcd-lol/pse-lua">
-  <img alt="Lines of Code" src="https://raw.githubusercontent.com/ntcd-lol/pse-lua/refs/heads/main/badges/lines.svg">
+  <img alt="Lines of Code" src="/badges/lines.svg">
 </div>
 
 
