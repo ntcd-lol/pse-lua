@@ -17,7 +17,10 @@ jobs:
 
       - name: Calculate LOC
         run: |
-          LOC=$(cloc . --not-match-dir=third_party --json | jq '.SUM.code')
+          LOC=$(cloc . --not-match-dir="third_party" --json | jq '.SUM.code' 2>/dev/null)
+          if [ -z "$LOC" ] || [ "$LOC" = "null" ]; then
+            LOC="0"
+          fi
           echo "LOC_COUNT=$LOC" >> $GITHUB_ENV
 
       - name: Create Dynamic Badge JSON
