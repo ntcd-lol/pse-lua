@@ -53,14 +53,18 @@ PSE.mock.emit("my_button", 1) --- Активация кнопки
 
 _* - см. в [Инициализация -> REPL](/docs/init/repl.md)_
 
-<table width="100%">
+<div align="center">
+
+<table>
   <tr>
-    <td width="40%" align="left">
+    <td align="left">
       <a href="/docs/init/index.md">← Назад: Инициализация</a>
     </td>
-    <td width="20%"></td>
-    <td width="40%" align="right">
+    <td width="100">&nbsp;</td>
+    <td align="right">
       <a href="/docs/init/repl.md">Далее: REPL →</a>
     </td>
   </tr>
 </table>
+
+</div>
