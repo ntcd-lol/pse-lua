@@ -1,6 +1,6 @@
 <h1 align="center">PSE SDK Lua</h1>
 
-![PSE SDK Lua](image.png)
+![PSE SDK Lua](docs/content/banner.png)
 
 ---
 
