@@ -1,7 +1,7 @@
 <table width="100%">
   <tr>
     <td align="left"><img src="/docs/content/cube.png" alt="Cube" width="120"/></td>
-    <td align="right">Документация -> Инициализация</td>
+    <td align="right" style="white-space: nowrap;">Документация -> Инициализация</td>
   </tr>
 </table>
 
