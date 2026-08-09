@@ -19,9 +19,8 @@ jobs:
       # 2. Подсчет строк кода и сохранение в переменную окружения
       - name: Calculate LOC
         run: |
-          # cloc считает только строки самого кода, исключая пустые строки и комментарии
-          # --json выводит структурированные данные, jq забирает итоговое число строк (code)
-          LOC=$(cloc . --json | jq '.SUM.code')
+          # Замените ИМЯ_ПАПКИ на название папки, которую нужно пропустить (например, vendor или dist)
+          LOC=$(cloc . --not-match-dir=third_party --json | jq '.SUM.code')
           echo "LOC_COUNT=$LOC" >> $GITHUB_ENV
 
       # 3. Генерация и загрузка JSON для Shields.io в Gist
