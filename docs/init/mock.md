@@ -1,8 +1,10 @@
 <div align="center">
-    <table width="100%">
-        <td align="left"><img src="/docs/content/cube.png" alt="Cube" width="50"/></td>
-        <td align="right"><h3>Документация -> Инициализация -> MOCK-режим</h3></td>
-    </table>
+  <table width="100%">
+    <tr>
+      <td align="left"><img src="/docs/content/cube.png" alt="Cube" width="50"/></td>
+      <td align="right"><h3>Документация → Инициализация → MOCK-режим</h3></td>
+    </tr>
+  </table>
 </div>
 
 ---
@@ -11,7 +13,7 @@
 
 ## Что это:
 
-MOCK-mode - режим симуляции игры, для быстрого тестирования кода и логики, без запуска игры с UE 5.5.
+MOCK-mode - режим симуляции игры, для быстрого тестирования кода и логики, без запуска игры на большом Unreal Engine 5.5.
 
 ### Как запустить PSE SDK Lua в этом режиме?
 
@@ -43,7 +45,7 @@ PSE.mock.emit("my_button", 1) --- Активация кнопки
 
 ### PSE.mock.emitRaw(guid, callbackid, state)
 
-Более низкоуровневый способ симуляции.
+Низкоуровневый вариант. Используй, когда нужно работать напрямую с GUID и Callback ID.
 
 |Аргумент|Обозначение|Пример|
 |---|---|---|
