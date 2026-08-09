@@ -23,8 +23,7 @@ cmake --build build --config Release
 
 ### Документация
 
- - Подключение
-   - Альтернативные методы
+ - [Инициализация](/docs/init/index.md)
    - MOCK-режим
    - REPL
  - Работа с игрой
