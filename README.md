@@ -34,6 +34,9 @@ cmake --build build --config Release
  - События
  - Регистры
 
+---
+
+<div align="center">
 <table width="100%">
   <tr>
     <td align="left" width="45%">
@@ -47,3 +50,4 @@ cmake --build build --config Release
     </td>
   </tr>
 </table>
+</div>

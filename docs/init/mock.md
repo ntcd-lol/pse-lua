@@ -53,8 +53,9 @@ PSE.mock.emit("my_button", 1) --- Активация кнопки
 
 _* - см. в [Инициализация -> REPL](/docs/init/repl.md)_
 
-<div align="center">
+---
 
+<div align="center">
 <table width="100%">
   <tr>
     <td align="left" width="45%">
@@ -68,3 +69,4 @@ _* - см. в [Инициализация -> REPL](/docs/init/repl.md)_
     </td>
   </tr>
 </table>
+</div>

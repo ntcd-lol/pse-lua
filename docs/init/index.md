@@ -34,6 +34,7 @@ PSE.initializeGame()
 
 ---
 
+<div align="center">
 <table width="100%">
   <tr>
     <td align="left" width="45%">
@@ -47,3 +48,4 @@ PSE.initializeGame()
     </td>
   </tr>
 </table>
+</div>
