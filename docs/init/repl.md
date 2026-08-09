@@ -60,7 +60,7 @@ pse>
       &nbsp;
     </td>
     <td align="right" width="45%">
-      <a href="/docs/game/index.md">Далее: Работа с игрой →</a>
+      <a href="/docs/game/index.md">Далее: Управление игрой →</a>
     </td>
   </tr>
 </table>

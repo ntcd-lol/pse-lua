@@ -9,6 +9,7 @@
 
 > [!IMPORTANT]
 > PSE SDK Lua еще стабилен не полностью, будет приятно ждать issue!
+
 ### Сборка
 
 **Windows** (MSVC Build Tools (желательно 2022) (Desktop development with C++)):
@@ -20,8 +21,8 @@ powershell -ExecutionPolicy Bypass -File build.ps1
 cmake -S . -B build -A x64
 cmake --build build --config Release
 ```
-**Linux/MacOS**:
 
+**Linux/MacOS**:
 > [!IMPORTANT]
 > К сожалению, PSE SDK Lua, а так же Portal: Solver не поддерживают Linux/MacOS из-за использования Windows API - Shared Memory. Используйте эмуляторы.
 
@@ -30,11 +31,13 @@ cmake --build build --config Release
  - [Инициализация](/docs/init/index.md)
    - [MOCK-режим](/docs/init/mock.md)
    - [REPL](/docs/init/repl.md)
- - Работа с игрой
- - Объект Player
- - Создание сторонних объектов
+ - [Управление игрой](/docs/game/index.md)
+ - Объекты
+   - Игрок
+   - Сторонние
  - События
  - Регистры
+
 
 ---
 
