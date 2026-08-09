@@ -3,7 +3,7 @@ name: Update LOC Badge
 on:
   push:
     branches:
-      - main # Замените на вашу ветку по умолчанию
+      - main
 
 jobs:
   update-badge:
@@ -12,18 +12,14 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # 1. Установка утилиты cloc для подсчета строк кода
       - name: Install cloc
         run: sudo apt-get update && sudo apt-get install -y cloc
 
-      # 2. Подсчет строк кода и сохранение в переменную окружения
       - name: Calculate LOC
         run: |
-          # Замените ИМЯ_ПАПКИ на название папки, которую нужно пропустить (например, vendor или dist)
           LOC=$(cloc . --not-match-dir=third_party --json | jq '.SUM.code')
           echo "LOC_COUNT=$LOC" >> $GITHUB_ENV
 
-      # 3. Генерация и загрузка JSON для Shields.io в Gist
       - name: Create Dynamic Badge JSON
         uses: schneegans/dynamic-badges-action@v1.9.0
         with:
