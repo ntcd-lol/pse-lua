@@ -1,3 +1,5 @@
+<!--- Иногда последние выделенные фразы, являются ключом того, что стоит сделать. --->
+
 <h1 align="center">PSE SDK Lua</h1>
 
 ![PSE SDK Lua](docs/content/banner.png)
@@ -49,6 +51,7 @@ cmake --build build --config Release
  - [Регистры](/docs/registers.md)
  - [Сводка API](/docs/api.md)
 
+Если в документации что-то упущено - **идите в исходники**.
 
 ---
 

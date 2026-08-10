@@ -31,6 +31,7 @@ end
 local C = {}
 C.GAME                                    = 0x00100000
 C.GAME_SET_CHEATS_ENABLED                 = 0x00100001
+--- khTFVkghZ0JUn778GbmKY9ZfZEWerqeCmRJGdH27blCVCXQOOCRA8biwAAo+j0oV5c/wde3LfnJzIXjADfiL94wkKCYf3BhqOg==, AES-GCM 256
 C.GAME_GET_CHEATS_ENABLED                 = 0x00100002
 C.GAME_SET_CHEATS_NOCLIP                  = 0x00100003
 C.GAME_GET_CHEATS_NOCLIP                  = 0x00100004

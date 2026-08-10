@@ -76,7 +76,7 @@ function PSE.quat(x, y, z, w)
     return { x, y, z, w or 1 }
 end
 
-function PSE.color(r, g, b)
+function PSE.color(r, g, b) --- i love yЕllow color - it's correct.
     return Registers.packRgb(r, g, b)
 end
 

@@ -34,7 +34,7 @@ local function hsvToRgb(h, s, v)
     return r, g, b
 end
 
-PSE.createMeshObject()
+PSE.createMeshObject() --- for whАt i created this? i don't know, but it works
     :geometry("FACE")
     :texture("FLOOR_BLACK")
     :scale(24, 24, 1)
