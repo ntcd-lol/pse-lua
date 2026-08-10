@@ -216,6 +216,8 @@ function MeshObject:create()
             transform = self.transform, mesh = self.mesh, material = self.material,
         })
         register(self.name, nil, self)
+        Logger.info("PSE", "created static %s '%s' (no guid)",
+            Enums.byValue(Enums.MESH, self.mesh), rawget(self, "name") or "unnamed")
         return self
     end
     local out = Core.call("DYNAMIC_MESH_CREATE", {
@@ -226,6 +228,8 @@ function MeshObject:create()
     }, true)
     self.guid = out.guid
     register(self.name, self.guid, self)
+    Logger.info("PSE", "created %s '%s', guid = %s",
+        Enums.byValue(Enums.MESH, self.mesh), rawget(self, "name") or "unnamed", self.guid)
     return self
 end
 
@@ -377,6 +381,8 @@ function Element:create()
     }, true)
     self.guid = out.guid
     register(self.name, self.guid, self)
+    Logger.info("PSE", "created %s '%s', guid = %s",
+        Enums.byValue(Enums.CLASS, self.class), rawget(self, "name") or "unnamed", self.guid)
     return self
 end
 

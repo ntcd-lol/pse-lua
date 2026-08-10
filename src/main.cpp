@@ -16,6 +16,7 @@
 #include <filesystem>
 #include <iostream>
 #include <string>
+#include <vector>
 
 extern "C" {
 #include "lua.h"
@@ -237,6 +238,239 @@ static bool tryRunBuffer(lua_State* L, const std::string& buf, bool force)
     return true;
 }
 
+// --- line editor with tab completion ---------------------------------------
+
+static std::string toUtf8(const std::wstring& s)
+{
+    if (s.empty()) return std::string();
+    const int n = WideCharToMultiByte(CP_UTF8, 0, s.data(), (int)s.size(), nullptr, 0, nullptr, nullptr);
+    std::string out(n, 0);
+    WideCharToMultiByte(CP_UTF8, 0, s.data(), (int)s.size(), out.data(), n, nullptr, nullptr);
+    return out;
+}
+
+static std::wstring toWide(const std::string& s)
+{
+    if (s.empty()) return std::wstring();
+    const int n = MultiByteToWideChar(CP_UTF8, 0, s.data(), (int)s.size(), nullptr, 0);
+    std::wstring out(n, 0);
+    MultiByteToWideChar(CP_UTF8, 0, s.data(), (int)s.size(), out.data(), n);
+    return out;
+}
+
+static const char* const kCompletionWords[] = {
+    "help", "exit", "quit",
+    "local", "function", "if", "then", "else", "elseif", "end", "for", "while",
+    "do", "repeat", "until", "return", "break", "true", "false", "nil",
+    "and", "or", "not", "require", "print", "type", "tostring", "tonumber",
+    "math", "string", "table", "os", "io", "pairs", "ipairs",
+    "PSE", "pse", "core", "Logger",
+    "version", "initialize", "deinitialize", "synchronize", "millis", "sleep",
+    "vec", "quat", "deg", "color", "guid", "get", "register",
+    "createMeshObject", "createStaticMesh", "createElement",
+    "spawnMeshObject", "spawnStaticMesh", "spawnElement",
+    "createButton", "createDoor", "createLamp", "createTrigger",
+    "createWeightCube", "createLaserTx", "createLaserRx", "createLaserRelay",
+    "createLaserPanel", "createFaithPlate", "createIndicator",
+    "createPedestalButton", "createSolverButton", "createWindow",
+    "on", "onElementChanged", "poll", "pollAll", "run", "mock",
+    "set_mock", "call", "push", "push_and_wait", "poll_event",
+    "registerCallback", "releaseCallback", "packInput",
+    "info", "debug", "warn", "warning", "error", "critical",
+    "setLevel", "setTag", "getTag", "setFile", "setColors", "paint",
+    "CUBE", "FACE", "PLANE", "CUP_INNER", "CUP_OUTER", "II_INNER", "II_OUTER",
+    "O_INNER", "O_OUTER", "U_INNER", "U_OUTER", "DOOR_FRAME",
+    "LASER_FRAME", "LASER_FRAME_SHIFTED", "PLANE_Z_SHIFTED",
+    "WALL_WHITE_SMALL", "WALL_WHITE_MEDIUM", "WALL_WHITE_DOUBLE", "WALL_WHITE_BIG",
+    "WALL_WHITE_ABSOLUTE_SCIENCE", "WALL_BLACK_SMALL", "WALL_BLACK_MEDIUM", "WALL_BLACK_BIG",
+    "FLOOR_WHITE", "FLOOR_BLACK", "WINDOW_METAL_GRID", "WINDOW_GLASS_METAL_GRID",
+    "WALL_YELLOW_1_0", "WALL_YELLOW_1_5",
+    "ENTRY_ELEVATOR", "EXIT_ELEVATOR", "DOOR", "BUTTON", "ANTI_EXPROPRIATION_FIELD",
+    "PEDESTAL_BUTTON", "SOLVER_BUTTON", "INDICATOR", "LASER_TX", "LASER_RX",
+    "LASER_RELAY", "LASER_PANEL", "LASER_CUBE", "WEIGHT_CUBE", "FAITH_PLATE",
+    "PANEL", "STAIRS", "CUBE_DROPPER", "SOLVER_GUN_PEDESTAL", "FLASHLIGHT",
+    "WINDOW", "TRIGGER", "LAMP",
+};
+
+static const char* const kMethodWords[] = {
+    "position", "rotation", "scale", "transform",
+    "geometry", "texture", "mesh", "material", "visible", "name", "create",
+    "state", "onChange", "register", "registers",
+    "applyTransform", "setState", "getState", "setPosition", "setRotation",
+    "setScale", "setTransform", "getTransform", "setClass", "getClass",
+    "setRegister", "getRegister", "setRegisters", "getRegisters",
+    "setCallback", "destroy", "setVisibility", "getVisibility",
+    "setMesh", "setMaterial", "setGeometry", "setTexture",
+    "getPosition", "setPosition", "getRotation", "setRotation", "spawn", "kill",
+    "setCheatsEnabled", "getCheatsEnabled", "setNoclip", "getNoclip",
+    "setGravity", "getGravity", "checkGuid",
+    "setEnabled", "getEnabled", "use", "release", "throw",
+    "emit", "emitRaw",
+};
+
+struct ConsoleLine
+{
+    HANDLE hOut;
+    COORD start;
+    std::wstring prompt;
+
+    ConsoleLine(HANDLE out, const std::wstring& p)
+        : hOut(out), prompt(p)
+    {
+        CONSOLE_SCREEN_BUFFER_INFO info;
+        GetConsoleScreenBufferInfo(hOut, &info);
+        start = info.dwCursorPosition;
+    }
+
+    void draw(const std::wstring& line, size_t cursor)
+    {
+        CONSOLE_SCREEN_BUFFER_INFO info;
+        GetConsoleScreenBufferInfo(hOut, &info);
+        DWORD n = 0;
+        const DWORD clearLen = info.dwSize.X - start.X;
+        FillConsoleOutputCharacterW(hOut, L' ', clearLen, start, &n);
+        SetConsoleCursorPosition(hOut, start);
+        WriteConsoleW(hOut, prompt.c_str(), (DWORD)prompt.size(), &n, nullptr);
+        WriteConsoleW(hOut, line.c_str(), (DWORD)line.size(), &n, nullptr);
+        placeCursor(cursor);
+    }
+
+    void placeCursor(size_t cursor)
+    {
+        COORD cur;
+        cur.X = (SHORT)(start.X + (SHORT)prompt.size() + (SHORT)cursor);
+        cur.Y = start.Y;
+        SetConsoleCursorPosition(hOut, cur);
+    }
+};
+
+static void handleTab(ConsoleLine& cl, std::wstring& line, size_t& cursor)
+{
+    const wchar_t* delims = L" \t():.=,;[]\"{}+-*/";
+    size_t start = cursor;
+    while (start > 0 && wcschr(delims, line[start - 1]) == nullptr) --start;
+
+    const std::wstring token = line.substr(start, cursor - start);
+    const std::string t = toUtf8(token);
+
+    std::vector<const char*> matches;
+    if (t.empty() && cursor > 0)
+    {
+        const wchar_t prev = line[cursor - 1];
+        if (prev == ':')
+            for (const char* w : kMethodWords) matches.push_back(w);
+        else if (prev == '.')
+            for (const char* w : kCompletionWords) matches.push_back(w);
+    }
+    else if (!t.empty())
+    {
+        for (const char* w : kCompletionWords)
+            if (std::strncmp(w, t.c_str(), t.size()) == 0) matches.push_back(w);
+        for (const char* w : kMethodWords)
+            if (std::strncmp(w, t.c_str(), t.size()) == 0) matches.push_back(w);
+    }
+
+    if (matches.empty()) return;
+
+    std::vector<const char*> unique;
+    for (const char* w : matches)
+    {
+        bool seen = false;
+        for (const char* u : unique) if (u == w) { seen = true; break; }
+        if (!seen) unique.push_back(w);
+    }
+    matches.swap(unique);
+
+    if (matches.size() == 1)
+    {
+        const std::wstring full = toWide(matches[0]);
+        line.replace(start, cursor - start, full);
+        cursor = start + full.size();
+        cl.draw(line, cursor);
+        return;
+    }
+
+    std::cout << "\n";
+    for (const char* w : matches) std::cout << w << "  ";
+    std::cout << "\n";
+    cl.draw(line, cursor);
+}
+
+static bool readLineInteractive(const std::string& promptUtf8, std::string& out)
+{
+    HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
+    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    DWORD inMode = 0;
+    if (hIn == INVALID_HANDLE_VALUE || hOut == INVALID_HANDLE_VALUE ||
+        !GetConsoleMode(hIn, &inMode))
+        return false;
+
+    ConsoleLine cl(hOut, toWide(promptUtf8));
+    std::wstring line;
+    size_t cursor = 0;
+    cl.draw(line, cursor);
+
+    SetConsoleMode(hIn, (inMode & ~(ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT)) | ENABLE_PROCESSED_INPUT);
+
+    for (;;)
+    {
+        INPUT_RECORD rec;
+        DWORD n = 0;
+        if (!ReadConsoleInputW(hIn, &rec, 1, &n) || n == 0) break;
+        if (rec.EventType != KEY_EVENT) continue;
+        const KEY_EVENT_RECORD& ke = rec.Event.KeyEvent;
+        if (!ke.bKeyDown) continue;
+
+        const WORD vk = ke.wVirtualKeyCode;
+        const wchar_t ch = ke.uChar.UnicodeChar;
+        const bool ctrl = (ke.dwControlKeyState & (LEFT_CTRL_PRESSED | RIGHT_CTRL_PRESSED)) != 0;
+
+        if (vk == VK_RETURN)
+        {
+            std::cout << "\n";
+            out = toUtf8(line);
+            SetConsoleMode(hIn, inMode);
+            return true;
+        }
+        if (ctrl && vk == 'C') { std::cout << "\n"; SetConsoleMode(hIn, inMode); std::exit(0); }
+        if (vk == VK_TAB) { handleTab(cl, line, cursor); continue; }
+        if (vk == VK_BACK) { if (cursor > 0) { line.erase(cursor - 1, 1); --cursor; cl.draw(line, cursor); } continue; }
+        if (vk == VK_DELETE) { if (cursor < line.size()) { line.erase(cursor, 1); cl.draw(line, cursor); } continue; }
+        if (vk == VK_LEFT) { if (cursor > 0) { --cursor; cl.placeCursor(cursor); } continue; }
+        if (vk == VK_RIGHT) { if (cursor < line.size()) { ++cursor; cl.placeCursor(cursor); } continue; }
+        if (vk == VK_HOME) { cursor = 0; cl.placeCursor(cursor); continue; }
+        if (vk == VK_END) { cursor = line.size(); cl.placeCursor(cursor); continue; }
+        if (vk == VK_UP || vk == VK_DOWN || vk == VK_ESCAPE) continue;
+
+        if (ch >= 32 && ch != 127)
+        {
+            line.insert(cursor, 1, ch);
+            ++cursor;
+            cl.draw(line, cursor);
+        }
+    }
+
+    SetConsoleMode(hIn, inMode);
+    return false;
+}
+
+static bool isConsoleInput()
+{
+    HANDLE h = GetStdHandle(STD_INPUT_HANDLE);
+    DWORD mode = 0;
+    return h != INVALID_HANDLE_VALUE && GetConsoleMode(h, &mode) != 0;
+}
+
+static bool readLine(const std::string& prompt, std::string& out)
+{
+    if (!isConsoleInput())
+    {
+        std::cout << prompt << std::flush;
+        return (bool)std::getline(std::cin, out);
+    }
+    return readLineInteractive(prompt, out);
+}
+
 static void replLine(lua_State* L, const std::string& raw)
 {
     std::string line = raw;
@@ -282,9 +516,8 @@ static void replLine(lua_State* L, const std::string& raw)
     {
         if (tryRunBuffer(L, buf, false)) return;
 
-        std::cout << "...> " << std::flush;
         std::string next;
-        if (!std::getline(std::cin, next)) break; 
+        if (!readLine("...> ", next)) break;
         if (!next.empty() && next.back() == '\r') next.pop_back();
 
         if (next == "exit" || next == "quit")
@@ -420,12 +653,10 @@ int main(int argc, char** argv)
     else
     {
         printBanner();
-        std::cout << "pse> " << std::flush;
         std::string line;
-        while (std::getline(std::cin, line))
+        while (readLine("pse> ", line))
         {
             replLine(L, line);
-            std::cout << "pse> " << std::flush;
         }
         std::cout << "\n";
     }
