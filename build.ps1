@@ -6,8 +6,8 @@
 # ^         ^
 # Canonical Windows build (PowerShell 5.1+). Stages sources into an ASCII
 # temp dir %TEMP%\pse_build (avoids spaces / non-ASCII project paths), then
-# compiles bundled Lua 5.4.8 + the C++ host via MSVC (vcvars64) and copies
-# the binary to <repo>\bin\pse_lua.exe.
+# compiles bundled Lua + the C++ host + the statically-linked pse-sdk via
+# MSVC (vcvars64) and copies the binary to <repo>\bin\pse_lua.exe.
 # Run:  powershell -ExecutionPolicy Bypass -File build.ps1
 # --==-==--
 
@@ -22,10 +22,12 @@ New-Item -ItemType Directory -Force -Path $Out | Out-Null
 if (Test-Path -LiteralPath $Stage) { Remove-Item -LiteralPath $Stage -Recurse -Force }
 New-Item -ItemType Directory -Force -Path $Stage | Out-Null
 Copy-Item -LiteralPath (Join-Path $Root "src") -Destination $Stage -Recurse -Force
-Copy-Item -LiteralPath (Join-Path $Root "third_party\lua-5.4.8") -Destination (Join-Path $Stage "lua") -Recurse -Force
+Copy-Item -LiteralPath (Join-Path $Root "third_party\lua") -Destination (Join-Path $Stage "lua") -Recurse -Force
+Copy-Item -LiteralPath (Join-Path $Root "third_party\pse-sdk") -Destination (Join-Path $Stage "pse-sdk") -Recurse -Force
 
-$Src = Join-Path $Stage "src"
-$Lua = Join-Path $Stage "lua"
+$Src    = Join-Path $Stage "src"
+$Lua    = Join-Path $Stage "lua"
+$PseSdk = Join-Path $Stage "pse-sdk"
 
 # --- MSVC environment --------------------------------------------------------
 $VCVARS = "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
@@ -44,17 +46,19 @@ $luaSources = Get-ChildItem -Path $Lua -Filter *.c -File |
     Where-Object { $_.BaseName -notin @("lua", "luac") }
 
 $cmdArgs = @()
-$cmdArgs += "/nologo", "/utf-8", "/W3", "/O2", "/EHsc", "/std:c++17", "/DNDEBUG"
+$cmdArgs += "/nologo", "/utf-8", "/W3", "/O2", "/EHsc", "/std:c++17", "/DNDEBUG", "/DPSE_EXPORTS"
 $cmdArgs += "/I", $Lua
 $cmdArgs += "/I", $Src
+$cmdArgs += "/I", (Join-Path $PseSdk "include")
 $cmdArgs += (Join-Path $Src "main.cpp")
 $cmdArgs += (Join-Path $Src "lua_core.cpp")
 $cmdArgs += (Join-Path $Src "pse_bridge.cpp")
+$cmdArgs += (Join-Path $PseSdk "source\pse.cpp")
 foreach ($s in $luaSources) { $cmdArgs += $s.FullName }
 $cmdArgs += "/Fe" + (Join-Path $Stage "pse_lua.exe")
 $cmdArgs += "/link", "/SUBSYSTEM:CONSOLE"
 
-Write-Host "[build] compiling in $Stage ($($luaSources.Count) lua files + 3 cpp files)..."
+Write-Host "[build] compiling in $Stage ($($luaSources.Count) lua files + 4 cpp files)..."
 Push-Location -Path $Stage
 try {
     & cl.exe @cmdArgs

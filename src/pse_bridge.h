@@ -4,7 +4,8 @@
 // \- Comment: :3
 // '-=#####=-'
 // ^         ^
-// Header of the C bridge between the embedded Lua and pse.dll.
+// Header of the C bridge between the embedded Lua and the pse-sdk
+// (statically linked from third_party/pse-sdk).
 // --==-==--
 
 #pragma once

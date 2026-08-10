@@ -29,10 +29,10 @@ bin\pse_lua.exe --mock
 Терминал в ответ вас поприветствует:
 
 ```
-  [bridge] pse.dll loaded: path/to/pse.dll
+  [bridge] pse-sdk connected: third_party/pse-sdk (statically linked)
 
   .-=:[ PSE SDK Lua ]:=-.   simplified PSE SDK + interpreter
-  version 0.1.0   (embedded Lua 5.4, pse.dll via dynamic load)
+  version 0.1.0   (embedded Lua 5.4, pse-sdk statically linked)
   type 'help' for commands, 'exit' to quit
 
 pse>

@@ -6,7 +6,7 @@
 // ^         ^
 // Exports the "core" table to Lua (push / push_and_wait / poll_event /
 // mock_emit / set_mock / initialize / deinitialize / synchronize / millis /
-// sleep) over pse.dll (pse_bridge) or the mock world emulator.
+// sleep) over the statically-linked pse-sdk (pse_bridge) or the mock world emulator.
 // --==-==--
 
 #include <Windows.h>

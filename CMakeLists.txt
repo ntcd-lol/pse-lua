@@ -4,8 +4,8 @@
 # \- Comment: :3
 # '-=#####=-'
 #
-# Builds the C++ bridge (src/pse_bridge.cpp + src/lua_core.cpp) and the
-# interpreter (host + bundled Lua 5.4.8).
+# Builds the C++ bridge (src/pse_bridge.cpp + src/lua_core.cpp), the
+# interpreter (host + bundled Lua), and the statically-linked pse-sdk.
 #
 #   cmake -S . -B build -G "Visual Studio 17 2022" -A x64
 #   cmake --build build --config Release
@@ -29,7 +29,7 @@ option(PSE_LUA_COPY_SDK "Copy the Lua SDK and examples next to the built binary"
 # ---------------------------------------------------------------------------
 # Lua 5.4: bundled (default) or system
 # ---------------------------------------------------------------------------
-set(PSE_LUA_BUNDLED_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/lua-5.4.8")
+set(PSE_LUA_BUNDLED_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/lua")
 set(PSE_LUA_SOURCES)
 set(PSE_LUA_INCLUDE_DIRS)
 
@@ -48,16 +48,20 @@ else()
 endif()
 
 # ---------------------------------------------------------------------------
-# C++ bridge: Lua <-> pse.dll (reusable static library)
+# C++ bridge: Lua <-> pse-sdk (reusable static library)
 # ---------------------------------------------------------------------------
+set(PSE_LUA_PSE_SDK_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/pse-sdk")
 add_library(pse_lua_bridge STATIC
     src/pse_bridge.cpp
     src/lua_core.cpp
+    "${PSE_LUA_PSE_SDK_DIR}/source/pse.cpp"
 )
 target_include_directories(pse_lua_bridge
     PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src"
     PRIVATE ${PSE_LUA_INCLUDE_DIRS}
+    PRIVATE "${PSE_LUA_PSE_SDK_DIR}/include"
 )
+target_compile_definitions(pse_lua_bridge PRIVATE PSE_EXPORTS)
 
 if(PSE_LUA_USE_SYSTEM_LUA)
     target_link_libraries(pse_lua_bridge PRIVATE ${LUA_LIBRARIES})

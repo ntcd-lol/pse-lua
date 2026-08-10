@@ -374,7 +374,7 @@ static void printBanner()
     std::cout <<
         "\n"
         "  .-=:[ PSE SDK Lua ]:=-.   simplified PSE SDK + interpreter\n"
-        "  version " << kVersion << "   (embedded Lua 5.4, pse.dll via dynamic load)\n"
+        "  version " << kVersion << "   (embedded Lua 5.4, pse-sdk statically linked)\n"
         "  type 'help' for commands, 'exit' to quit\n"
         "\n";
 }
@@ -385,9 +385,9 @@ int main(int argc, char** argv)
 
     psebridge::load();
     if (psebridge::isLoaded())
-        printf("  [bridge] pse.dll loaded: %s\n", psebridge::dllPath().c_str());
+        printf("  [bridge] pse-sdk connected: %s\n", psebridge::dllPath().c_str());
     else
-        printf("  [bridge] pse.dll NOT found - use core.set_mock(true) for offline work\n");
+        printf("  [bridge] pse-sdk: game not running - use core.set_mock(true) for offline work\n");
 
     lua_State* L = luaL_newstate();
     if (!L) { std::cerr << "Failed to create Lua state\n"; return -1; }
@@ -399,8 +399,8 @@ int main(int argc, char** argv)
     bool sdkOk = loadSdk(L);
     if (sdkOk)
     {
-        const char* dll = psebridge::isLoaded() ? psebridge::dllPath().c_str() : "(none)";
-        const char* msgs[4] = { "PSE", "PSE SDK Lua %s loaded (pse.dll: %s)", kVersion, dll };
+        const char* dll = psebridge::isLoaded() ? psebridge::dllPath().c_str() : "(offline)";
+        const char* msgs[4] = { "PSE", "PSE SDK Lua %s loaded (pse-sdk: %s)", kVersion, dll };
         callGlobalStr(L, "Logger", "info", 4, msgs);
     }
 
