@@ -59,7 +59,7 @@ local pos = PSE.player:getPosition() --- {x, y, z}
 Установка поворота игрока (низкоуровневый метод).
 
 > [!TIP]
-> Это сложный метод вращения на базе кватерниона, лучше используйте [PSE.player:setDegree(pitch, yaw, roll)](#pseplayersetdegreepitch-yaw-roll).
+> Это сложный метод вращения на базе кватерниона, лучше используйте [`PSE.player:setDegree(pitch, yaw, roll)`](#pseplayersetdegreepitch-yaw-roll).
 
 ```lua
 PSE.player:setRotation(0, 0, 0, 1)
@@ -77,7 +77,7 @@ PSE.player:setRotation(0, 0, 0, 1)
 Получение поворота игрока (низкоуровневый метод).
 
 > [!TIP]
-> Это сложный метод вращения на базе кватерниона, лучше используйте [PSE.player:getDegree()](#pseplayergetdegree).
+> Это сложный метод вращения на базе кватерниона, лучше используйте [`PSE.player:getDegree()`](#pseplayergetdegree).
 
 ```lua
 local rot = PSE.player:getRotation() --- {x, y, z, w}
@@ -125,7 +125,7 @@ local deg = PSE.player:getRotation() --- {pitch, yaw, roll}
 Убивает игрока.
 
 > [!WARNING]
-> БАГ: в REPL вызывание данной команды превращает убийство в вечный цикл спавна и убийства игрока. В скрипте СРАЗУ после `kill()` используйте `setPosition()` (опоционально) и `spawn()`
+> KNOWN ISSUE: в REPL вызывание данной команды превращает убийство в вечный цикл спавна и убийства игрока. В скрипте СРАЗУ после `kill()` используйте `setPosition()` (опоционально) и `spawn()`
 
 ```lua
 PSE.player:kill()
@@ -153,7 +153,7 @@ _* - Unreal Engine использует систему координат, в к
       &nbsp;
     </td>
     <td align="right" width="45%">
-      <a href="/docs/objects/index.md">Далее: Сторонние →</a>
+      <a href="/docs/objects/third.md">Далее: Сторонние →</a>
     </td>
   </tr>
 </table>

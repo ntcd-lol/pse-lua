@@ -34,20 +34,6 @@ local function hsvToRgb(h, s, v)
     return r, g, b
 end
 
-local function degToQuat(pitch, yaw, roll)
-    local d2r = math.pi / 180
-    local p, y, r = pitch * d2r, yaw * d2r, roll * d2r
-    local sp, cp = math.sin(p / 2), math.cos(p / 2)
-    local sy, cy = math.sin(y / 2), math.cos(y / 2)
-    local sr, cr = math.sin(r / 2), math.cos(r / 2)
-    return {
-        cr * sp * sy + sr * cp * cy,
-        cr * sp * cy - sr * cp * sy,
-        cr * cp * sy - sr * sp * cy,
-        cr * cp * cy + sr * sp * sy,
-    }
-end
-
 PSE.createMeshObject()
     :geometry("FACE")
     :texture("FLOOR_BLACK")
@@ -84,16 +70,10 @@ for frame = 0, FRAMES - 1 do
         local lookAngle = SPEED_1 * t + alpha + SPEED_2 * t
         local x = R1 * math.cos(SPEED_1 * t + alpha) + R2 * math.cos(SPEED_2 * t)
         local y = R1 * math.sin(SPEED_1 * t + alpha) + R2 * math.sin(SPEED_2 * t)
-        PSE.Core.push("ELEMENT_SET_TRANSFORM", {
-            guid = lasers[i + 1].guid,
-            transform = {
-                quat = degToQuat(0, lookAngle * 180 / math.pi, 0),
-                location = { x, y, -1575 },
-                scale = { 1, 1, 1 },
-            },
-        })
+        lasers[i + 1]
+            :setDegree(0, lookAngle * 180 / math.pi, 0)
+            :setPosition(x, y, -1575)
     end
-    PSE.Core.synchronize()
     PSE.sleep(FRAME_MS)
 end
 

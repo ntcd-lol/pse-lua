@@ -10,6 +10,8 @@
 
 local Pack = {}
 
+local typeOf = type
+
 Pack.SIZE = 60
 
 local FMT = {
@@ -27,6 +29,7 @@ function Pack.size(type)
     if type == "transform" then return 40 end
     if type == "guid" then return 8 end
     if type.type then return type.count * Pack.size(type.type) end
+    if typeOf(type) == "table" and type[1] and type[2] then return type[2] * Pack.size(type[1]) end
     return #string.pack("<" .. FMT[type], 0)
 end
 
@@ -87,6 +90,13 @@ function Pack.set(buf, offset, type, value)
         end
         return buf
     end
+    if typeOf(type) == "table" and type[1] and type[2] then
+        local count, base = type[2], type[1]
+        for i = 1, count do
+            buf = Pack.set(buf, offset + (i - 1) * Pack.size(base), base, value[i])
+        end
+        return buf
+    end
     if type == "vec3" then
         local s = string.pack("<fff", axis3(value))
         local h, t = splitAt(buf, offset, 12)
@@ -119,6 +129,14 @@ end
 function Pack.get(buf, offset, type)
     if type.type then
         local count, base = type.count, type.type
+        local out = {}
+        for i = 1, count do
+            out[i] = Pack.get(buf, offset + (i - 1) * Pack.size(base), base)
+        end
+        return out
+    end
+    if typeOf(type) == "table" and type[1] and type[2] then
+        local count, base = type[2], type[1]
         local out = {}
         for i = 1, count do
             out[i] = Pack.get(buf, offset + (i - 1) * Pack.size(base), base)

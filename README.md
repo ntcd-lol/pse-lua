@@ -42,9 +42,10 @@ cmake --build build --config Release
  - [Управление игрой](/docs/game.md)
  - [Объекты](/docs/objects/index.md)
    - [Игрок](/docs/objects/player.md)
-   - Сторонние
- - События
- - Регистры
+   - [Сторонние](/docs/objects/third.md)
+ - [События](/docs/events.md)
+ - [Регистры](/docs/registers.md)
+ - [Сводка API](/docs/api.md)
 
 
 ---
