@@ -9,6 +9,8 @@
 
 ---
 
+Portal Solver Editor: Software Development Kit on Lua
+
 > [!NOTE]
 > Это обвязка Fluent API поверх оригинального [PSE SDK](https://github.com/RootTool0/pse-sdk), чтобы облегчить создание уровней и логики. Используется Lua 5.4 Embedded.
 
