@@ -76,20 +76,6 @@ function PSE.quat(x, y, z, w)
     return { x, y, z, w or 1 }
 end
 
-function PSE.deg(pitch, yaw, roll)
-    local d2r = math.pi / 180
-    local p, y, r = pitch * d2r, yaw * d2r, roll * d2r
-    local sp, cp = math.sin(p / 2), math.cos(p / 2)
-    local sy, cy = math.sin(y / 2), math.cos(y / 2)
-    local sr, cr = math.sin(r / 2), math.cos(r / 2)
-    return {
-        x = cr * sp * sy + sr * cp * cy,
-        y = cr * sp * cy - sr * cp * sy,
-        z = cr * cp * sy - sr * sp * cy,
-        w = cr * cp * cy + sr * sp * sy,
-    }
-end
-
 function PSE.color(r, g, b)
     return Registers.packRgb(r, g, b)
 end
@@ -148,6 +134,37 @@ end
 
 local function flag(b)
     return b and 1 or 0
+end
+
+local function degreesToQuat(pitch, yaw, roll)
+    local d2r = math.pi / 180
+    local p, y, r = pitch * d2r, yaw * d2r, roll * d2r
+    local sp, cp = math.sin(p / 2), math.cos(p / 2)
+    local sy, cy = math.sin(y / 2), math.cos(y / 2)
+    local sr, cr = math.sin(r / 2), math.cos(r / 2)
+    return {
+        cr * sp * sy + sr * cp * cy,
+        cr * sp * cy - sr * cp * sy,
+        cr * cp * sy - sr * sp * cy,
+        cr * cp * cy + sr * sp * sy,
+    }
+end
+
+local function quatToDegrees(q)
+    local x, y, z, w = q[1] or 0, q[2] or 0, q[3] or 0, q[4] or 1
+    local M02 = 2 * (x * z + w * y)
+    local M10 = 2 * (x * y + w * z)
+    local M11 = 1 - 2 * (x * x + z * z)
+    local M12 = 2 * (y * z - w * x)
+    local M22 = 1 - 2 * (x * x + y * y)
+    local pitch = math.atan(M02, M22)
+    local yaw = math.atan(M10, M11)
+    local cp = math.cos(pitch)
+    local roll = 0
+    if math.abs(cp) > 1e-6 then
+        roll = math.atan(-M12, M22 / cp)
+    end
+    return math.deg(pitch), math.deg(yaw), math.deg(roll)
 end
 
 local MeshObject = {}
@@ -272,6 +289,11 @@ function MeshObject:setRotation(x, y, z, w)
     return self:rotation(x, y, z, w):applyTransform()
 end
 
+function MeshObject:setDegree(pitch, yaw, roll)
+    local q = degreesToQuat(pitch, yaw, roll)
+    return self:rotation(q[1], q[2], q[3], q[4]):applyTransform()
+end
+
 function MeshObject:setScale(x, y, z)
     return self:scale(x, y, z):applyTransform()
 end
@@ -284,6 +306,11 @@ function MeshObject:getTransform()
     local o = Core.call("DYNAMIC_MESH_GET_TRANSFORM", { guid = self.guid }, true)
     self.transform = normalizeTransform(o.transform)
     return self.transform
+end
+
+function MeshObject:getDegree()
+    self:getTransform()
+    return quatToDegrees(self.transform.quat)
 end
 
 function MeshObject:destroy()
@@ -380,6 +407,11 @@ function Element:create()
         bVisibility = flag(self.visibility),
     }, true)
     self.guid = out.guid
+    if next(self.registers) ~= nil then
+        for i, v in pairs(self.registers) do
+            Core.call("ELEMENT_SET_REGISTER", { guid = self.guid, register = v, index = i })
+        end
+    end
     register(self.name, self.guid, self)
     Logger.info("PSE", "created %s '%s', guid = %s",
         Enums.byValue(Enums.CLASS, self.class), rawget(self, "name") or "unnamed", self.guid)
@@ -421,6 +453,11 @@ function Element:setRotation(x, y, z, w)
     return self:rotation(x, y, z, w):applyTransform()
 end
 
+function Element:setDegree(pitch, yaw, roll)
+    local q = degreesToQuat(pitch, yaw, roll)
+    return self:rotation(q[1], q[2], q[3], q[4]):applyTransform()
+end
+
 function Element:setScale(x, y, z)
     return self:scale(x, y, z):applyTransform()
 end
@@ -433,6 +470,11 @@ function Element:getTransform()
     local o = Core.call("ELEMENT_GET_TRANSFORM", { guid = self.guid }, true)
     self.transform = normalizeTransform(o.transform)
     return self.transform
+end
+
+function Element:getDegree()
+    self:getTransform()
+    return quatToDegrees(self.transform.quat)
 end
 
 function Element:setClass(c)
@@ -530,6 +572,14 @@ PSE.player = {
     setPosition = function(self, x, y, z) Core.call("PLAYER_SET_LOCATION", { location = PSE.vec(x, y, z) }); return self end,
     getRotation = function(self) return Core.call("PLAYER_GET_ROTATION", nil, true).quat end,
     setRotation = function(self, x, y, z, w) Core.call("PLAYER_SET_ROTATION", { quat = PSE.quat(x, y, z, w) }); return self end,
+    setDegree   = function(self, pitch, yaw, roll)
+        Core.call("PLAYER_SET_ROTATION", { quat = degreesToQuat(pitch, yaw, roll) })
+        return self
+    end,
+    getDegree   = function(self)
+        local o = Core.call("PLAYER_GET_ROTATION", nil, true)
+        return quatToDegrees(o.quat)
+    end,
     spawn       = function(self) Core.call("PLAYER_SPAWN"); return self end,
     kill        = function(self) Core.call("PLAYER_KILL"); return self end,
 }

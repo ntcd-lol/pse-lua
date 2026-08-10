@@ -15,6 +15,8 @@ local SPEED_2 = 1.5
 local FRAMES = 60
 local FRAME_MS = 50
 
+PSE.initialize()
+
 local function hsvToRgb(h, s, v)
     local i = math.floor(h % 6)
     local f = h - math.floor(h)
@@ -30,6 +32,20 @@ local function hsvToRgb(h, s, v)
     else               r, g, b = v, p, q
     end
     return r, g, b
+end
+
+local function degToQuat(pitch, yaw, roll)
+    local d2r = math.pi / 180
+    local p, y, r = pitch * d2r, yaw * d2r, roll * d2r
+    local sp, cp = math.sin(p / 2), math.cos(p / 2)
+    local sy, cy = math.sin(y / 2), math.cos(y / 2)
+    local sr, cr = math.sin(r / 2), math.cos(r / 2)
+    return {
+        cr * sp * sy + sr * cp * cy,
+        cr * sp * cy - sr * cp * sy,
+        cr * cp * sy - sr * sp * cy,
+        cr * cp * cy + sr * sp * sy,
+    }
 end
 
 PSE.createMeshObject()
@@ -71,7 +87,7 @@ for frame = 0, FRAMES - 1 do
         PSE.Core.push("ELEMENT_SET_TRANSFORM", {
             guid = lasers[i + 1].guid,
             transform = {
-                quat = PSE.deg(0, lookAngle * 180 / math.pi, 0),
+                quat = degToQuat(0, lookAngle * 180 / math.pi, 0),
                 location = { x, y, -1575 },
                 scale = { 1, 1, 1 },
             },

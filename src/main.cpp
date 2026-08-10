@@ -9,8 +9,10 @@
 // the first positional argument runs a Lua script, otherwise a REPL opens.
 // --==-==--
 
+#define NOMINMAX
 #include <Windows.h>
 
+#include <algorithm>
 #include <cctype>
 #include <cstring>
 #include <filesystem>
@@ -308,13 +310,20 @@ static const char* const kMethodWords[] = {
     "emit", "emitRaw",
 };
 
-struct ConsoleLine
+struct Editor
 {
     HANDLE hOut;
     COORD start;
     std::wstring prompt;
+    std::wstring line;
+    size_t cursor = 0;
+    size_t tokenStart = 0;
+    std::vector<std::wstring> matches;
+    int selected = 0;
+    int lastListTop = -1;
+    int lastListCount = 0;
 
-    ConsoleLine(HANDLE out, const std::wstring& p)
+    Editor(HANDLE out, const std::wstring& p)
         : hOut(out), prompt(p)
     {
         CONSOLE_SCREEN_BUFFER_INFO info;
@@ -322,81 +331,245 @@ struct ConsoleLine
         start = info.dwCursorPosition;
     }
 
-    void draw(const std::wstring& line, size_t cursor)
+    void drawInputRow()
     {
         CONSOLE_SCREEN_BUFFER_INFO info;
         GetConsoleScreenBufferInfo(hOut, &info);
         DWORD n = 0;
-        const DWORD clearLen = info.dwSize.X - start.X;
-        FillConsoleOutputCharacterW(hOut, L' ', clearLen, start, &n);
+        FillConsoleOutputCharacterW(hOut, L' ', info.dwSize.X - start.X, start, &n);
         SetConsoleCursorPosition(hOut, start);
         WriteConsoleW(hOut, prompt.c_str(), (DWORD)prompt.size(), &n, nullptr);
         WriteConsoleW(hOut, line.c_str(), (DWORD)line.size(), &n, nullptr);
-        placeCursor(cursor);
     }
 
-    void placeCursor(size_t cursor)
+    void drawSuggestions()
+    {
+        const int count = (int)matches.size();
+        const int maxRows = 5;
+
+        CONSOLE_SCREEN_BUFFER_INFO info;
+        GetConsoleScreenBufferInfo(hOut, &info);
+        SMALL_RECT win = info.srWindow;
+        const SHORT h = win.Bottom - win.Top + 1;
+
+        if (count > 0)
+        {
+            // Anchor the list to the bottom of the visible window and keep the
+            // input row just above it.
+            SHORT bottom = (SHORT)(start.Y + maxRows);
+            if (bottom >= info.dwSize.Y) bottom = (SHORT)(info.dwSize.Y - 1);
+            SHORT top = (SHORT)(bottom - h + 1);
+            if (top < 0)
+            {
+                top = 0;
+                bottom = (SHORT)(h - 1);
+                if (bottom >= info.dwSize.Y) bottom = (SHORT)(info.dwSize.Y - 1);
+            }
+            win.Top = top;
+            win.Bottom = bottom;
+            SetConsoleWindowInfo(hOut, TRUE, &win);
+        }
+
+        // Clear the previously drawn list (rows that scrolled out of the window
+        // are simply not visible anymore).
+        if (lastListCount > 0)
+        {
+            DWORD n = 0;
+            for (int i = 0; i < lastListCount; ++i)
+            {
+                COORD row = { 0, (SHORT)(lastListTop + i) };
+                FillConsoleOutputCharacterW(hOut, L' ', info.dwSize.X, row, &n);
+            }
+        }
+        lastListTop = -1;
+        lastListCount = 0;
+
+        if (count > 0)
+        {
+            SHORT topRow = (SHORT)(win.Bottom - count + 1);
+            if (topRow <= start.Y) topRow = (SHORT)(start.Y + 1);
+            const SHORT fit = (SHORT)(win.Bottom - topRow + 1);
+            const int shown = std::min(count, (int)fit);
+            DWORD n = 0;
+            for (int i = 0; i < shown; ++i)
+            {
+                COORD row = { 0, (SHORT)(topRow + i) };
+                FillConsoleOutputCharacterW(hOut, L' ', info.dwSize.X, row, &n);
+                std::wstring s = (i == selected ? L"> " : L"  ") + matches[i];
+                WriteConsoleW(hOut, s.c_str(), (DWORD)s.size(), &n, nullptr);
+            }
+            lastListTop = topRow;
+            lastListCount = shown;
+        }
+    }
+
+    void placeCursor()
     {
         COORD cur;
         cur.X = (SHORT)(start.X + (SHORT)prompt.size() + (SHORT)cursor);
         cur.Y = start.Y;
         SetConsoleCursorPosition(hOut, cur);
     }
+
+    void redraw()
+    {
+        drawSuggestions();
+        drawInputRow();
+        placeCursor();
+    }
 };
 
-static void handleTab(ConsoleLine& cl, std::wstring& line, size_t& cursor)
+static bool exprIsSafe(const std::string& expr)
 {
-    const wchar_t* delims = L" \t():.=,;[]\"{}+-*/";
-    size_t start = cursor;
-    while (start > 0 && wcschr(delims, line[start - 1]) == nullptr) --start;
-
-    const std::wstring token = line.substr(start, cursor - start);
-    const std::string t = toUtf8(token);
-
-    std::vector<const char*> matches;
-    if (t.empty() && cursor > 0)
-    {
-        const wchar_t prev = line[cursor - 1];
-        if (prev == ':')
-            for (const char* w : kMethodWords) matches.push_back(w);
-        else if (prev == '.')
-            for (const char* w : kCompletionWords) matches.push_back(w);
-    }
-    else if (!t.empty())
-    {
-        for (const char* w : kCompletionWords)
-            if (std::strncmp(w, t.c_str(), t.size()) == 0) matches.push_back(w);
-        for (const char* w : kMethodWords)
-            if (std::strncmp(w, t.c_str(), t.size()) == 0) matches.push_back(w);
-    }
-
-    if (matches.empty()) return;
-
-    std::vector<const char*> unique;
-    for (const char* w : matches)
-    {
-        bool seen = false;
-        for (const char* u : unique) if (u == w) { seen = true; break; }
-        if (!seen) unique.push_back(w);
-    }
-    matches.swap(unique);
-
-    if (matches.size() == 1)
-    {
-        const std::wstring full = toWide(matches[0]);
-        line.replace(start, cursor - start, full);
-        cursor = start + full.size();
-        cl.draw(line, cursor);
-        return;
-    }
-
-    std::cout << "\n";
-    for (const char* w : matches) std::cout << w << "  ";
-    std::cout << "\n";
-    cl.draw(line, cursor);
+    static const char* forbidden[] = {
+        "run(", "sleep(", "pollAll(", "poll(", "dofile", "loadfile", "require(",
+        "os.", "io.", "debug.", "package.",
+        ":create(", ":destroy(", ":setState(", ":setPosition(", ":setRotation(",
+        ":setScale(", ":setTransform(", ":setVisibility(", ":setMaterial(",
+        ":setMesh(", ":setClass(", ":setRegister(", ":setRegisters(",
+        ":setCallback(", ":applyTransform(", ":initialize(", ":deinitialize(",
+        ":checkGuid(", ":setGravity(", ":setNoclip(", ":setCheatsEnabled(",
+        ":setEnabled(", ":use(", ":release(", ":throw(", ":spawn(", ":kill(",
+        "mock.emit",
+    };
+    for (const char* f : forbidden)
+        if (std::strstr(expr.c_str(), f)) return false;
+    return true;
 }
 
-static bool readLineInteractive(const std::string& promptUtf8, std::string& out)
+static void collectObjectKeys(lua_State* L, int idx, std::vector<std::string>& out, int depth, bool metaOnly)
+{
+    if (depth > 4) return;
+    idx = lua_absindex(L, idx);
+    if (lua_istable(L, idx))
+    {
+        bool hasIndex = false;
+        if (lua_getmetatable(L, idx))
+        {
+            lua_getfield(L, -1, "__index");
+            if (lua_istable(L, -1))
+            {
+                hasIndex = true;
+                collectObjectKeys(L, -1, out, depth + 1, false);
+            }
+            lua_pop(L, 2);
+        }
+        // In method space (':') a plain table like PSE.player has no __index
+        // metatable, so fall back to its own keys instead of suggesting nothing
+        // (and instead of falling through to the global word list).
+        if (!metaOnly || !hasIndex)
+        {
+            lua_pushnil(L);
+            while (lua_next(L, idx) != 0)
+            {
+                if (lua_type(L, -2) == LUA_TSTRING)
+                {
+                    const char* k = lua_tostring(L, -2);
+                    if (k && k[0] != '_' && std::strcmp(k, "new") != 0)
+                        out.push_back(k);
+                }
+                lua_pop(L, 1);
+            }
+        }
+    }
+    else if (lua_type(L, idx) == LUA_TUSERDATA || lua_type(L, idx) == LUA_TLIGHTUSERDATA)
+    {
+        if (lua_getmetatable(L, idx))
+        {
+            lua_getfield(L, -1, "__index");
+            if (lua_istable(L, -1))
+                collectObjectKeys(L, -1, out, depth + 1, false);
+            lua_pop(L, 2);
+        }
+    }
+}
+
+static bool evaluateObject(lua_State* L, const std::string& expr, bool metaOnly, std::vector<std::string>& out)
+{
+    if (expr.empty() || expr.size() > 256 || !exprIsSafe(expr)) return false;
+    for (char c : expr) if (c == '=' || c == ';') return false;
+
+    const std::string code = "return " + expr;
+    if (luaL_loadbuffer(L, code.data(), code.size(), "=pse-comp") != LUA_OK)
+    {
+        lua_pop(L, 1);
+        return false;
+    }
+    if (lua_pcall(L, 0, 1, 0) != LUA_OK)
+    {
+        lua_pop(L, 1);
+        return false;
+    }
+    collectObjectKeys(L, -1, out, 0, metaOnly);
+    lua_pop(L, 1);
+    return !out.empty();
+}
+
+static void computeMatches(lua_State* L, Editor& ed)
+{
+    const wchar_t* delims = L" \t():.=,;[]\"{}+-*/";
+    size_t start = ed.cursor;
+    while (start > 0 && wcschr(delims, ed.line[start - 1]) == nullptr) --start;
+    ed.tokenStart = start;
+
+    const std::wstring token = ed.line.substr(start, ed.cursor - start);
+    const std::string t = toUtf8(token);
+    const wchar_t sep = start > 0 ? ed.line[start - 1] : 0;
+
+    // After ':' / '.' completion is scoped to the object that precedes the
+    // separator: only that object's members are offered, never the global
+    // word list. An empty head (e.g. a continuation line ":position(") is the
+    // only case that falls back to the global words.
+    bool scoped = false;
+    std::vector<std::string> names;
+    if (sep == ':' || sep == '.')
+    {
+        std::wstring head = ed.line.substr(0, start);
+        while (!head.empty() &&
+               (head.back() == L':' || head.back() == L'.' ||
+                head.back() == L' ' || head.back() == L'\t'))
+            head.pop_back();
+        const std::string expr = toUtf8(head);
+        if (!expr.empty())
+        {
+            scoped = true;
+            if (!evaluateObject(L, expr, sep == ':', names))
+                names.clear();
+        }
+    }
+
+    auto addUnique = [&](const std::string& w)
+    {
+        if ((int)ed.matches.size() >= 5) return;
+        const std::wstring ww = toWide(w);
+        for (const auto& m : ed.matches) if (m == ww) return;
+        ed.matches.push_back(ww);
+    };
+
+    auto push = [&](const std::string& w)
+    {
+        if (w.size() < t.size()) return;
+        if (std::strncmp(w.c_str(), t.c_str(), t.size()) != 0) return;
+        addUnique(w);
+    };
+
+    ed.matches.clear();
+    if (scoped)
+    {
+        for (const std::string& w : names) if (std::strcmp(w.c_str(), t.c_str()) == 0) push(w);
+        for (const std::string& w : names) if (std::strcmp(w.c_str(), t.c_str()) != 0) push(w);
+    }
+    else
+    {
+        for (const char* w : kCompletionWords) push(w);
+        for (const char* w : kMethodWords) push(w);
+    }
+
+    if (ed.matches.size() == 1 && ed.matches[0] == token) ed.matches.clear();
+    if (ed.selected >= (int)ed.matches.size()) ed.selected = 0;
+}
+
+static bool readLineInteractive(lua_State* L, const std::string& promptUtf8, std::string& out)
 {
     HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
     HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -405,12 +578,17 @@ static bool readLineInteractive(const std::string& promptUtf8, std::string& out)
         !GetConsoleMode(hIn, &inMode))
         return false;
 
-    ConsoleLine cl(hOut, toWide(promptUtf8));
-    std::wstring line;
-    size_t cursor = 0;
-    cl.draw(line, cursor);
+    Editor ed(hOut, toWide(promptUtf8));
+    computeMatches(L, ed);
+    ed.redraw();
 
     SetConsoleMode(hIn, (inMode & ~(ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT)) | ENABLE_PROCESSED_INPUT);
+
+    auto refresh = [&]()
+    {
+        computeMatches(L, ed);
+        ed.redraw();
+    };
 
     for (;;)
     {
@@ -427,26 +605,69 @@ static bool readLineInteractive(const std::string& promptUtf8, std::string& out)
 
         if (vk == VK_RETURN)
         {
+            ed.matches.clear();
+            ed.redraw();
             std::cout << "\n";
-            out = toUtf8(line);
+            out = toUtf8(ed.line);
             SetConsoleMode(hIn, inMode);
             return true;
         }
-        if (ctrl && vk == 'C') { std::cout << "\n"; SetConsoleMode(hIn, inMode); std::exit(0); }
-        if (vk == VK_TAB) { handleTab(cl, line, cursor); continue; }
-        if (vk == VK_BACK) { if (cursor > 0) { line.erase(cursor - 1, 1); --cursor; cl.draw(line, cursor); } continue; }
-        if (vk == VK_DELETE) { if (cursor < line.size()) { line.erase(cursor, 1); cl.draw(line, cursor); } continue; }
-        if (vk == VK_LEFT) { if (cursor > 0) { --cursor; cl.placeCursor(cursor); } continue; }
-        if (vk == VK_RIGHT) { if (cursor < line.size()) { ++cursor; cl.placeCursor(cursor); } continue; }
-        if (vk == VK_HOME) { cursor = 0; cl.placeCursor(cursor); continue; }
-        if (vk == VK_END) { cursor = line.size(); cl.placeCursor(cursor); continue; }
-        if (vk == VK_UP || vk == VK_DOWN || vk == VK_ESCAPE) continue;
+        if (ctrl && vk == 'C')
+        {
+            ed.matches.clear();
+            ed.redraw();
+            std::cout << "\n";
+            SetConsoleMode(hIn, inMode);
+            std::exit(0);
+        }
+        if (vk == VK_TAB)
+        {
+            if (!ed.matches.empty())
+            {
+                const std::wstring& word = ed.matches[ed.selected];
+                ed.line.replace(ed.tokenStart, ed.cursor - ed.tokenStart, word);
+                ed.cursor = ed.tokenStart + word.size();
+            }
+            refresh();
+            continue;
+        }
+        if (vk == VK_UP)
+        {
+            if (!ed.matches.empty())
+            {
+                if (--ed.selected < 0) ed.selected = (int)ed.matches.size() - 1;
+                ed.redraw();
+            }
+            continue;
+        }
+        if (vk == VK_DOWN)
+        {
+            if (!ed.matches.empty())
+            {
+                ed.selected = (ed.selected + 1) % (int)ed.matches.size();
+                ed.redraw();
+            }
+            continue;
+        }
+        if (vk == VK_ESCAPE)
+        {
+            ed.matches.clear();
+            ed.selected = 0;
+            ed.redraw();
+            continue;
+        }
+        if (vk == VK_BACK) { if (ed.cursor > 0) { ed.line.erase(ed.cursor - 1, 1); --ed.cursor; refresh(); } continue; }
+        if (vk == VK_DELETE) { if (ed.cursor < ed.line.size()) { ed.line.erase(ed.cursor, 1); refresh(); } continue; }
+        if (vk == VK_LEFT) { if (ed.cursor > 0) { --ed.cursor; refresh(); } continue; }
+        if (vk == VK_RIGHT) { if (ed.cursor < ed.line.size()) { ++ed.cursor; refresh(); } continue; }
+        if (vk == VK_HOME) { ed.cursor = 0; refresh(); continue; }
+        if (vk == VK_END) { ed.cursor = ed.line.size(); refresh(); continue; }
 
         if (ch >= 32 && ch != 127)
         {
-            line.insert(cursor, 1, ch);
-            ++cursor;
-            cl.draw(line, cursor);
+            ed.line.insert(ed.cursor, 1, ch);
+            ++ed.cursor;
+            refresh();
         }
     }
 
@@ -461,14 +682,14 @@ static bool isConsoleInput()
     return h != INVALID_HANDLE_VALUE && GetConsoleMode(h, &mode) != 0;
 }
 
-static bool readLine(const std::string& prompt, std::string& out)
+static bool readLine(lua_State* L, const std::string& prompt, std::string& out)
 {
     if (!isConsoleInput())
     {
         std::cout << prompt << std::flush;
         return (bool)std::getline(std::cin, out);
     }
-    return readLineInteractive(prompt, out);
+    return readLineInteractive(L, prompt, out);
 }
 
 static void replLine(lua_State* L, const std::string& raw)
@@ -517,7 +738,7 @@ static void replLine(lua_State* L, const std::string& raw)
         if (tryRunBuffer(L, buf, false)) return;
 
         std::string next;
-        if (!readLine("...> ", next)) break;
+        if (!readLine(L, "...> ", next)) break;
         if (!next.empty() && next.back() == '\r') next.pop_back();
 
         if (next == "exit" || next == "quit")
@@ -654,7 +875,7 @@ int main(int argc, char** argv)
     {
         printBanner();
         std::string line;
-        while (readLine("pse> ", line))
+        while (readLine(L, "pse> ", line))
         {
             replLine(L, line);
         }

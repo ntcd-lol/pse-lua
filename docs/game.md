@@ -83,7 +83,7 @@ PSE.game
 
 PSE.player
     :setPosition(0, 0, 0)
-    :setRotation(PSE.deg(0, 90, 0))
+    :setDegree(0, 90, 0)
     :spawn()
 ```
 
