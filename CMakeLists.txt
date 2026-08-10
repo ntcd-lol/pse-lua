@@ -7,10 +7,6 @@
 # Builds the C++ bridge (src/pse_bridge.cpp + src/lua_core.cpp), the
 # interpreter (host + bundled Lua), and the statically-linked pse-sdk.
 #
-#   cmake -S . -B build -G "Visual Studio 17 2022" -A x64
-#   cmake --build build --config Release
-#   build\bin\pse_lua.exe --mock examples\hello.lua
-#
 # Options:
 #   PSE_LUA_USE_SYSTEM_LUA  - use a system-installed Lua instead of third_party (OFF)
 #   PSE_LUA_COPY_SDK        - copy lua/ and examples/ next to the exe (ON)
