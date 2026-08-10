@@ -41,7 +41,7 @@ cmake --build build --config Release
    - [REPL](/docs/init/repl.md)
  - [Управление игрой](/docs/game.md)
  - [Объекты](/docs/objects/index.md)
-   - Игрок
+   - [Игрок](/docs/objects/player.md)
    - Сторонние
  - События
  - Регистры
