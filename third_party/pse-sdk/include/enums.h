@@ -119,6 +119,7 @@ enum PseMesh : uint16_t
 	PSE_MESH_LASER_FRAME         = 0x000C,
 	PSE_MESH_LASER_FRAME_SHIFTED = 0x000D,
 	PSE_MESH_PLANE_Z_SHIFTED     = 0x000E,
+	PSE_MESH_CUBE_DROPPER_FRAME  = 0x000F,
 };
 
 enum PseMaterial : uint16_t
