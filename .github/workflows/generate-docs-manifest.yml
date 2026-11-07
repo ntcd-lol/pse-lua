@@ -33,7 +33,7 @@ jobs:
 
       - name: Update Gist
         env:
-          GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
+          GIST_TOKEN: ${{ secrets.GIST_SECRET }}
           GIST_ID: 'b4b3652e08f3272fd16cc1017311b3d9'
         run: |
           jq -n \
