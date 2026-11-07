@@ -191,5 +191,3 @@ print(fields.Center, fields.PassLaser)
   </tr>
 </table>
 </div>
-
-<!--- small test of manifest --->
