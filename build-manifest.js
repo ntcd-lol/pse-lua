@@ -417,6 +417,8 @@ function mdPathToSectionId(href, sections, currentSectionId) {
     .replace(/^\/+/, '')
     .replace(/\.md$/i, '');
 
+  clean = clean.replace(/^docs\//, '');
+
   const id = clean.split('/').join('-');
 
   const exists = sections.some(s => s.id === id);
