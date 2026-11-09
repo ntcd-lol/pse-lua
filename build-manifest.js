@@ -1,3 +1,14 @@
+// build-manifest.js — генератор manifest.json из docs/*.md (+ README.md)
+// Запуск: node build-manifest.js
+//
+// ENV (все опциональны):
+//   DOCS_DIR  — папка с .md          (по умолчанию ./docs)
+//   OUTPUT    — путь к результату    (по умолчанию ./manifest.json)
+//   PROJECT   — имя проекта          (по умолчанию pse-lua)
+//   OWNER     — владелец             (по умолчанию ntcd-lol)
+//   BRANCH    — ветка для raw-URL    (по умолчанию main)
+//   RAW_BASE  — база для картинок    (по умолчанию https://raw.githubusercontent.com/<OWNER>/<PROJECT>/<BRANCH>)
+
 const fs = require('fs');
 const path = require('path');
 const matter = require('gray-matter');
@@ -10,6 +21,9 @@ const BRANCH   = process.env.BRANCH   || 'main';
 const RAW_BASE = process.env.RAW_BASE ||
   `https://raw.githubusercontent.com/${OWNER}/${PROJECT}/${BRANCH}`;
 
+/* ============================================================
+ * INLINE-РАЗМЕТКА
+ * ============================================================ */
 function parseInline(text) {
   const nodes = [];
   let i = 0;
@@ -54,7 +68,7 @@ function parseInline(text) {
       }
     }
 
-    // ![alt](url) — картинка
+    // ![alt](url)
     if (ch === '!' && text[i + 1] === '[') {
       const close = text.indexOf(']', i + 2);
       if (close !== -1 && text[close + 1] === '(') {
@@ -71,7 +85,7 @@ function parseInline(text) {
       }
     }
 
-    // [text](url) — ссылка
+    // [text](url)
     if (ch === '[') {
       const close = text.indexOf(']', i + 1);
       if (close !== -1 && text[close + 1] === '(') {
@@ -88,7 +102,6 @@ function parseInline(text) {
       }
     }
 
-    // обычный текст до спецсимвола
     let j = i + 1;
     while (j < text.length && !'`*!['.includes(text[j])) j++;
     pushText(text.slice(i, j));
@@ -98,6 +111,9 @@ function parseInline(text) {
   return nodes;
 }
 
+/* ============================================================
+ * ПУТИ К КАРТИНКАМ
+ * ============================================================ */
 function absAsset(p) {
   if (!p) return p;
   if (p.startsWith('#')) return p;
@@ -110,21 +126,16 @@ function absAsset(p) {
 function rewriteAssetUrls(markdown) {
   let s = markdown;
 
-  // ![alt](/path)  →  ![alt](RAW_BASE/path)
   s = s.replace(/!\[([^\]]*)\]\((\/[^)\s]+)\)/g, (_, alt, p) => {
     return `![${alt}](${RAW_BASE}${p})`;
   });
 
-  // [text](/path)  →  [text](RAW_BASE/path)   (только не после !)
   s = s.replace(/(?<!!)\[([^\]]*)\]\((\/[^)\s]+)\)/g, (_, text, p) => {
     if (p.startsWith('//')) return `[${text}](${p})`;
     return `[${text}](${RAW_BASE}${p})`;
   });
 
-  // HTML: src="/path"
   s = s.replace(/\bsrc=(["'])(\/[^"']+)\1/g, (_, q, p) => `src=${q}${RAW_BASE}${p}${q}`);
-
-  // HTML: href="/path"
   s = s.replace(/\bhref=(["'])(\/[^"']+)\1/g, (_, q, p) => {
     if (p.startsWith('//')) return `href=${q}${p}${q}`;
     return `href=${q}${RAW_BASE}${p}${q}`;
@@ -133,6 +144,42 @@ function rewriteAssetUrls(markdown) {
   return s;
 }
 
+/* ============================================================
+ * ЗАГОЛОВОК ИЗ HTML-ШАПКИ
+ *   <h3>Документация → Сводка API</h3>  →  "Сводка API"
+ *   <h3>Документация → Инициализация → MOCK-режим</h3>
+ *                                          →  "MOCK-режим"
+ * ============================================================ */
+function extractHeadingFromHeader(content) {
+  const head = content.slice(0, 2000);
+  const m = head.match(/<h[1-6][^>]*>([\s\S]*?)<\/h[1-6]>/i);
+  if (!m) return null;
+
+  let text = m[1]
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  // нормализуем ASCII-стрелки в →
+  text = text.replace(/\s*-+>\s*/g, ' → ');
+
+  // берём всё после последней →
+  const arrowIdx = text.lastIndexOf('→');
+  if (arrowIdx !== -1) text = text.slice(arrowIdx + 1).trim();
+
+  // убираем префикс "Документация"
+  text = text.replace(/^Документация\s*[:\-–—]?\s*/i, '').trim();
+
+  return text || null;
+}
+
+/* ============================================================
+ * ТАБЛИЦЫ
+ * ============================================================ */
 function isTableRow(line) {
   return /^\s*\|.*\|\s*$/.test(line);
 }
@@ -157,6 +204,9 @@ function parseTable(lines, start) {
   return { block: { type: 'table', header, rows }, nextIndex: i };
 }
 
+/* ============================================================
+ * СПИСКИ
+ * ============================================================ */
 function isListItem(line) {
   return /^\s*([-*+]|\d+\.)\s+/.test(line);
 }
@@ -176,6 +226,9 @@ function parseList(lines, start) {
   return { block: { type: 'list', ordered, items }, nextIndex: i };
 }
 
+/* ============================================================
+ * HTML-БЛОК
+ * ============================================================ */
 const HTML_PAIR_TAGS =
   'div|table|thead|tbody|tr|td|th|span|p|ul|ol|li|a|h[1-6]|' +
   'section|article|header|footer|nav|main|figure|figcaption|' +
@@ -214,6 +267,9 @@ function parseHtmlBlock(lines, start) {
   };
 }
 
+/* ============================================================
+ * ОСНОВНОЙ ПАРСЕР
+ * ============================================================ */
 function parseMarkdownToBlocks(markdown) {
   const lines = markdown.split('\n');
   const blocks = [];
@@ -230,7 +286,6 @@ function parseMarkdownToBlocks(markdown) {
   while (i < lines.length) {
     const line = lines[i];
 
-    // ---- HTML-блок ----
     if (isHtmlStart(line)) {
       flushParagraph();
       const { block, nextIndex } = parseHtmlBlock(lines, i);
@@ -239,7 +294,6 @@ function parseMarkdownToBlocks(markdown) {
       continue;
     }
 
-    // ---- code fence ----
     const fence = line.match(/^```(\w*)\s*$/);
     if (fence) {
       flushParagraph();
@@ -255,7 +309,6 @@ function parseMarkdownToBlocks(markdown) {
       continue;
     }
 
-    // ---- heading ----
     const h = line.match(/^(#{1,6})\s+(.+?)\s*$/);
     if (h) {
       flushParagraph();
@@ -264,7 +317,6 @@ function parseMarkdownToBlocks(markdown) {
       continue;
     }
 
-    // ---- table ----
     if (isTableRow(line) && i + 1 < lines.length && isTableSeparator(lines[i + 1])) {
       flushParagraph();
       const { block, nextIndex } = parseTable(lines, i);
@@ -275,7 +327,6 @@ function parseMarkdownToBlocks(markdown) {
       continue;
     }
 
-    // ---- list ----
     if (isListItem(line)) {
       flushParagraph();
       const { block, nextIndex } = parseList(lines, i);
@@ -285,7 +336,6 @@ function parseMarkdownToBlocks(markdown) {
       continue;
     }
 
-    // ---- hr ----
     if (/^\s*---+\s*$/.test(line)) {
       flushParagraph();
       blocks.push({ type: 'hr' });
@@ -293,7 +343,6 @@ function parseMarkdownToBlocks(markdown) {
       continue;
     }
 
-    // ---- пустая строка ----
     if (line.trim() === '') {
       flushParagraph();
       i++;
@@ -308,15 +357,8 @@ function parseMarkdownToBlocks(markdown) {
   return blocks;
 }
 
-function stripServiceHtml(content) {
-  let s = content;
-  s = s.replace(/^\s*<div[^>]*align\s*=\s*["']center["'][^>]*>[\s\S]*?<\/div>\s*(?:---\s*)?/i, '');
-  s = s.replace(/(?:---\s*)?<div[^>]*align\s*=\s*["']center["'][^>]*>[\s\S]*?<\/div>\s*$/i, '');
-  return s.trim();
-}
-
 /* ============================================================
- * СБОР МАНИФЕСТА
+ * СБОР ФАЙЛОВ
  * ============================================================ */
 function collectMarkdownFiles(dir) {
   const out = [];
@@ -331,23 +373,45 @@ function collectMarkdownFiles(dir) {
   return out;
 }
 
-function buildManifest() {
+function collectDocs() {
   const files = collectMarkdownFiles(DOCS_DIR);
 
+  // добавляем корневой README.md (если DOCS_DIR не корень и файла там нет)
+  const rootReadme = path.resolve('README.md');
+  const hasRootReadme = files.some(f => path.resolve(f) === rootReadme);
+  if (!hasRootReadme && fs.existsSync(rootReadme)) {
+    files.unshift(rootReadme); // README — первым
+  }
+
+  return files;
+}
+
+/* ============================================================
+ * СБОРКА МАНИФЕСТА
+ * ============================================================ */
+function buildManifest() {
+  const files = collectDocs();
+
   const sections = files.map((file, index) => {
-    const rel = path.relative(DOCS_DIR, file).split(path.sep).join('/');
+    let rel = path.relative(DOCS_DIR, file).split(path.sep).join('/');
+    // файл вне DOCS_DIR (например, корневой README) — берём имя как есть
+    if (rel.startsWith('..')) rel = path.basename(file);
+
     const raw = fs.readFileSync(file, 'utf8');
     const { data, content } = matter(raw);
 
     const noExt = rel.endsWith('.md') ? rel.slice(0, -3) : rel;
-    const id    = data.id    || noExt.split('/').join('-');
-    const title = data.title || id;
-    const order = typeof data.order === 'number' ? data.order : index;
+    const id    = data.id || noExt.split('/').join('-');
 
-    // переписываем абсолютные пути на raw-URL GitHub
+    // заголовок: frontmatter → HTML-шапка → id
+    const fromHeader = extractHeadingFromHeader(content);
+    const title = data.title || fromHeader || id;
+
+    const order = typeof data.order === 'number'
+      ? data.order
+      : (file === path.resolve('README.md') ? -1 : index);
+
     const rewritten = rewriteAssetUrls(content);
-
-    // шапку НЕ вырезаем — рендерим как html-блок
     const blocks = parseMarkdownToBlocks(rewritten);
 
     return {
@@ -372,6 +436,7 @@ function buildManifest() {
   fs.writeFileSync(OUTPUT, JSON.stringify(manifest, null, 2) + '\n', 'utf8');
   console.log(`✓ ${OUTPUT} — ${sections.length} sections from ${DOCS_DIR}`);
   console.log(`  RAW_BASE = ${RAW_BASE}`);
+  sections.forEach(s => console.log(`  • ${s.sourceFile} → "${s.title}"`));
 }
 
 buildManifest();
