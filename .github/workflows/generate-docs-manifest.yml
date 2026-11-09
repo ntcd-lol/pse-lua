@@ -34,7 +34,7 @@ jobs:
 
       - name: Update Gist
         env:
-          GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
+          GIST_TOKEN: ${{ secrets.GIST_SECRET }}
           GIST_ID: ${{ vars.GIST_ID }}
         run: |
           if [ -z "$GIST_ID" ]; then
