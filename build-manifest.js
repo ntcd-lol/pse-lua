@@ -10,6 +10,28 @@ const BRANCH   = process.env.BRANCH   || 'main';
 const RAW_BASE = process.env.RAW_BASE ||
   `https://raw.githubusercontent.com/${OWNER}/${PROJECT}/${BRANCH}`;
 
+function slugify(text) {
+  const map = {
+    'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'yo','ж':'zh',
+    'з':'z','и':'i','й':'y','к':'k','л':'l','м':'m','н':'n','о':'o',
+    'п':'p','р':'r','с':'s','т':'t','у':'u','ф':'f','х':'h','ц':'ts',
+    'ч':'ch','ш':'sh','щ':'sch','ъ':'','ы':'y','ь':'','э':'e','ю':'yu',
+    'я':'ya'
+  };
+
+  return String(text || '')
+    .toLowerCase()
+    .split('')
+    .map(ch => map[ch] !== undefined ? map[ch] : ch)
+    .join('')
+    .replace(/[`*_~\[\](){}<>]/g, '')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '') || 'section';
+}
+
 function parseInline(text) {
   const nodes = [];
   let i = 0;
@@ -102,6 +124,7 @@ function rewriteAssetUrls(markdown, fileDir) {
     if (p.startsWith('#')) return p;
     if (p.startsWith('//')) return p;
     if (/^https?:\/\//i.test(p)) return p;
+    if (/\.md(?:#.*)?$/i.test(p)) return p;
     if (p.startsWith('/')) return RAW_BASE + p;
     const clean = p.replace(/^\.\//, '');
     const prefix = fileDir ? `${fileDir}/` : '';
@@ -113,7 +136,7 @@ function rewriteAssetUrls(markdown, fileDir) {
   s = s.replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g, (_, alt, p) => `![${alt}](${joinBase(p)})`);
 
   s = s.replace(/(?<!!)\[([^\]]*)\]\(([^)\s]+)\)/g, (_, text, p) => {
-    if (p.startsWith('#') || p.startsWith('//') || /^https?:\/\//i.test(p)) {
+    if (p.startsWith('#') || p.startsWith('//') || /^https?:\/\//i.test(p) || /\.md(?:#.*)?$/i.test(p)) {
       return `[${text}](${p})`;
     }
     return `[${text}](${joinBase(p)})`;
@@ -368,6 +391,86 @@ function parseMarkdownToBlocks(markdown) {
   return blocks;
 }
 
+function mdPathToSectionId(href, sections, currentSectionId) {
+  if (!href) return href;
+  if (/^https?:\/\//i.test(href)) return href;
+
+  let pathPart = href;
+  let anchor = '';
+  const hashIdx = pathPart.indexOf('#');
+  if (hashIdx !== -1) {
+    anchor = decodeURIComponent(pathPart.slice(hashIdx + 1));
+    pathPart = pathPart.slice(0, hashIdx);
+  }
+
+  const anchorSlug = anchor ? slugify(anchor) : '';
+
+  if (!pathPart) {
+    if (!currentSectionId || !anchorSlug) return href;
+    return `#sec-${currentSectionId}-${anchorSlug}`;
+  }
+
+  if (!/\.md$/i.test(pathPart)) return href;
+
+  let clean = pathPart
+    .replace(/^\.\//, '')
+    .replace(/^\/+/, '')
+    .replace(/\.md$/i, '');
+
+  const id = clean.split('/').join('-');
+
+  const exists = sections.some(s => s.id === id);
+  if (!exists) return href;
+
+  if (anchorSlug) return `#sec-${id}-${anchorSlug}`;
+  return `#sec-${id}`;
+}
+
+function rewriteMdLinksInBlocks(blocks, sections, currentSectionId) {
+  const walkInline = (nodes) => {
+    if (!Array.isArray(nodes)) return;
+    for (const n of nodes) {
+      if (!n) continue;
+      if (n.type === 'link' && typeof n.href === 'string') {
+        n.href = mdPathToSectionId(n.href, sections, currentSectionId);
+      }
+    }
+  };
+
+  for (const b of blocks || []) {
+    if (!b || typeof b !== 'object') continue;
+
+    switch (b.type) {
+      case 'heading':
+      case 'prose':
+      case 'callout':
+        walkInline(b.inline);
+        break;
+
+      case 'list':
+        for (const item of b.items || []) walkInline(item);
+        break;
+
+      case 'table':
+        for (const cell of b.header || []) walkInline(cell);
+        for (const row of b.rows || []) for (const cell of row) walkInline(cell);
+        break;
+
+      case 'html':
+        if (typeof b.content === 'string') {
+          b.content = b.content.replace(
+            /\bhref=(["'])([^"']+\.md(?:#[^"']*)?)\1/gi,
+            (_, q, p) => {
+              const replaced = mdPathToSectionId(p, sections, currentSectionId);
+              return `href=${q}${replaced}${q}`;
+            }
+          );
+        }
+        break;
+    }
+  }
+}
+
 function collectMarkdownFiles(dir) {
   const out = [];
   const walk = (current) => {
@@ -426,6 +529,10 @@ function buildManifest() {
       blocks
     };
   });
+
+  for (const s of sections) {
+    rewriteMdLinksInBlocks(s.blocks, sections, s.id);
+  }
 
   sections.sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
   sections.forEach(s => delete s.order);
