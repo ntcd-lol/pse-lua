@@ -24,7 +24,6 @@ function parseInline(text) {
   while (i < text.length) {
     const ch = text[i];
 
-    // `code`
     if (ch === '`') {
       const end = text.indexOf('`', i + 1);
       if (end !== -1) {
@@ -68,7 +67,6 @@ function parseInline(text) {
       }
     }
 
-    // [text](url)
     if (ch === '[') {
       const close = text.indexOf(']', i + 1);
       if (close !== -1 && text[close + 1] === '(') {
@@ -138,14 +136,11 @@ function extractHeadingFromHeader(content) {
     .replace(/\s+/g, ' ')
     .trim();
 
-  // нормализуем ASCII-стрелки в →
   text = text.replace(/\s*-+>\s*/g, ' → ');
 
-  // берём всё после последней →
   const arrowIdx = text.lastIndexOf('→');
   if (arrowIdx !== -1) text = text.slice(arrowIdx + 1).trim();
 
-  // убираем префикс "Документация"
   text = text.replace(/^Документация\s*[:\-–—]?\s*/i, '').trim();
 
   return text || null;
@@ -232,6 +227,47 @@ function parseHtmlBlock(lines, start) {
   };
 }
 
+const CALLOUT_VARIANTS = new Set(['note', 'tip', 'important', 'warning', 'caution', 'danger', 'info']);
+
+function isCalloutStart(line) {
+  return /^\s*>\s*\[!(\w+)\]\s*$/i.test(line);
+}
+
+function parseCallout(lines, start) {
+  const m = lines[start].match(/^\s*>\s*\[!(\w+)\]\s*$/i);
+  const variant = (m[1] || 'note').toLowerCase();
+  const safeVariant = CALLOUT_VARIANTS.has(variant) ? variant : 'note';
+
+  const bodyLines = [];
+  let i = start + 1;
+
+  while (i < lines.length) {
+    const l = lines[i];
+
+    if (l.trim() === '') {
+      if (i + 1 < lines.length && /^\s*>/.test(lines[i + 1])) {
+        bodyLines.push('');
+        i++;
+        continue;
+      }
+      break;
+    }
+
+    const q = l.match(/^\s*>\s?(.*)$/);
+    if (!q) break;
+
+    bodyLines.push(q[1]);
+    i++;
+  }
+
+  const text = bodyLines.join('\n').trim();
+
+  return {
+    block: { type: 'callout', variant: safeVariant, inline: parseInline(text) },
+    nextIndex: i
+  };
+}
+
 function parseMarkdownToBlocks(markdown) {
   const lines = markdown.split('\n');
   const blocks = [];
@@ -247,6 +283,14 @@ function parseMarkdownToBlocks(markdown) {
 
   while (i < lines.length) {
     const line = lines[i];
+
+    if (isCalloutStart(line)) {
+      flushParagraph();
+      const { block, nextIndex } = parseCallout(lines, i);
+      blocks.push(block);
+      i = nextIndex;
+      continue;
+    }
 
     if (isHtmlStart(line)) {
       flushParagraph();
@@ -335,11 +379,10 @@ function collectMarkdownFiles(dir) {
 function collectDocs() {
   const files = collectMarkdownFiles(DOCS_DIR);
 
-  // добавляем корневой README.md (если DOCS_DIR не корень и файла там нет)
   const rootReadme = path.resolve('README.md');
   const hasRootReadme = files.some(f => path.resolve(f) === rootReadme);
   if (!hasRootReadme && fs.existsSync(rootReadme)) {
-    files.unshift(rootReadme); // README — первым
+    files.unshift(rootReadme);
   }
 
   return files;
@@ -350,7 +393,6 @@ function buildManifest() {
 
   const sections = files.map((file, index) => {
     let rel = path.relative(DOCS_DIR, file).split(path.sep).join('/');
-    // файл вне DOCS_DIR (например, корневой README) — берём имя как есть
     if (rel.startsWith('..')) rel = path.basename(file);
 
     const raw = fs.readFileSync(file, 'utf8');
@@ -359,7 +401,6 @@ function buildManifest() {
     const noExt = rel.endsWith('.md') ? rel.slice(0, -3) : rel;
     const id    = data.id || noExt.split('/').join('-');
 
-    // заголовок: frontmatter → HTML-шапка → id
     const fromHeader = extractHeadingFromHeader(content);
     const title = data.title || fromHeader || id;
 
