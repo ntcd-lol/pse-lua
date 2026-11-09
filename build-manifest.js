@@ -1,14 +1,3 @@
-// build-manifest.js — генератор manifest.json из docs/*.md (+ README.md)
-// Запуск: node build-manifest.js
-//
-// ENV (все опциональны):
-//   DOCS_DIR  — папка с .md          (по умолчанию ./docs)
-//   OUTPUT    — путь к результату    (по умолчанию ./manifest.json)
-//   PROJECT   — имя проекта          (по умолчанию pse-lua)
-//   OWNER     — владелец             (по умолчанию ntcd-lol)
-//   BRANCH    — ветка для raw-URL    (по умолчанию main)
-//   RAW_BASE  — база для картинок    (по умолчанию https://raw.githubusercontent.com/<OWNER>/<PROJECT>/<BRANCH>)
-
 const fs = require('fs');
 const path = require('path');
 const matter = require('gray-matter');
@@ -21,9 +10,6 @@ const BRANCH   = process.env.BRANCH   || 'main';
 const RAW_BASE = process.env.RAW_BASE ||
   `https://raw.githubusercontent.com/${OWNER}/${PROJECT}/${BRANCH}`;
 
-/* ============================================================
- * INLINE-РАЗМЕТКА
- * ============================================================ */
 function parseInline(text) {
   const nodes = [];
   let i = 0;
@@ -48,7 +34,6 @@ function parseInline(text) {
       }
     }
 
-    // **bold**
     if (ch === '*' && text[i + 1] === '*') {
       const end = text.indexOf('**', i + 2);
       if (end !== -1) {
@@ -58,7 +43,6 @@ function parseInline(text) {
       }
     }
 
-    // *italic*
     if (ch === '*') {
       const end = text.indexOf('*', i + 1);
       if (end !== -1) {
@@ -68,7 +52,6 @@ function parseInline(text) {
       }
     }
 
-    // ![alt](url)
     if (ch === '!' && text[i + 1] === '[') {
       const close = text.indexOf(']', i + 2);
       if (close !== -1 && text[close + 1] === '(') {
@@ -111,9 +94,6 @@ function parseInline(text) {
   return nodes;
 }
 
-/* ============================================================
- * ПУТИ К КАРТИНКАМ
- * ============================================================ */
 function absAsset(p) {
   if (!p) return p;
   if (p.startsWith('#')) return p;
@@ -144,12 +124,6 @@ function rewriteAssetUrls(markdown) {
   return s;
 }
 
-/* ============================================================
- * ЗАГОЛОВОК ИЗ HTML-ШАПКИ
- *   <h3>Документация → Сводка API</h3>  →  "Сводка API"
- *   <h3>Документация → Инициализация → MOCK-режим</h3>
- *                                          →  "MOCK-режим"
- * ============================================================ */
 function extractHeadingFromHeader(content) {
   const head = content.slice(0, 2000);
   const m = head.match(/<h[1-6][^>]*>([\s\S]*?)<\/h[1-6]>/i);
@@ -177,9 +151,6 @@ function extractHeadingFromHeader(content) {
   return text || null;
 }
 
-/* ============================================================
- * ТАБЛИЦЫ
- * ============================================================ */
 function isTableRow(line) {
   return /^\s*\|.*\|\s*$/.test(line);
 }
@@ -204,9 +175,6 @@ function parseTable(lines, start) {
   return { block: { type: 'table', header, rows }, nextIndex: i };
 }
 
-/* ============================================================
- * СПИСКИ
- * ============================================================ */
 function isListItem(line) {
   return /^\s*([-*+]|\d+\.)\s+/.test(line);
 }
@@ -226,9 +194,6 @@ function parseList(lines, start) {
   return { block: { type: 'list', ordered, items }, nextIndex: i };
 }
 
-/* ============================================================
- * HTML-БЛОК
- * ============================================================ */
 const HTML_PAIR_TAGS =
   'div|table|thead|tbody|tr|td|th|span|p|ul|ol|li|a|h[1-6]|' +
   'section|article|header|footer|nav|main|figure|figcaption|' +
@@ -267,9 +232,6 @@ function parseHtmlBlock(lines, start) {
   };
 }
 
-/* ============================================================
- * ОСНОВНОЙ ПАРСЕР
- * ============================================================ */
 function parseMarkdownToBlocks(markdown) {
   const lines = markdown.split('\n');
   const blocks = [];
@@ -357,9 +319,6 @@ function parseMarkdownToBlocks(markdown) {
   return blocks;
 }
 
-/* ============================================================
- * СБОР ФАЙЛОВ
- * ============================================================ */
 function collectMarkdownFiles(dir) {
   const out = [];
   const walk = (current) => {
@@ -386,9 +345,6 @@ function collectDocs() {
   return files;
 }
 
-/* ============================================================
- * СБОРКА МАНИФЕСТА
- * ============================================================ */
 function buildManifest() {
   const files = collectDocs();
 
