@@ -55,3 +55,5 @@ Logger.info("MAIN", "connection OK - the game answered every command")
 PSE.game:deinitialize()
 PSE.deinitialize()
 Logger.info("MAIN", "session closed")
+
+

@@ -39,3 +39,5 @@ door:setRegister(0, PSE.Registers.build("DOOR", 0, { A = 1, C = 0 }))
 Logger.info("MAIN", "door flag register = 0x%08X (A=1)", door:getRegister(0))
 
 Logger.info("MAIN", "done. try PSE.get('main_door'):getState() in the REPL")
+
+

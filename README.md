@@ -2,7 +2,7 @@
 
 <h1 align="center">PSE SDK Lua</h1>
 
-![PSE SDK Lua](docs/content/banner.png)
+![PSE SDK Lua](docs/content/banner.svg)
 
 <div align="center">
   <img alt="Commits" src="https://img.shields.io/github/commit-activity/m/ntcd-lol/pse-lua?style=for-the-badge">
@@ -70,3 +70,5 @@ cmake --build build --config Release
   </tr>
 </table>
 </div>
+
+

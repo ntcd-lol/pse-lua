@@ -1,7 +1,7 @@
 <div align="center">
   <table width="100%">
     <tr>
-      <td align="left"><img src="/docs/content/cube.png" alt="Cube" width="50"/></td>
+      <td align="left"><img src="/docs/content/cube.svg" alt="Cube" width="50"/></td>
       <td align="right"><h3>Документация → Объекты → Игрок</h3></td>
     </tr>
   </table>
@@ -160,3 +160,4 @@ _* - Unreal Engine использует систему координат, в к
 </div>
 
 <!--- You can be w0rld. --->
+

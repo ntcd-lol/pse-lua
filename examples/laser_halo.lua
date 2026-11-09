@@ -78,3 +78,5 @@ for frame = 0, FRAMES - 1 do
 end
 
 Logger.info("MAIN", "animation finished")
+
+

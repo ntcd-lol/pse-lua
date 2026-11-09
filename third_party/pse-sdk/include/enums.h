@@ -175,3 +175,5 @@ enum PseClass : uint16_t
 	PSE_CLASS_TRIGGER                  = 0x0015,
 	PSE_CLASS_LAMP                     = 0x0016
 };
+
+

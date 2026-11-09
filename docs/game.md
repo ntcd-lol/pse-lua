@@ -1,7 +1,7 @@
 <div align="center">
   <table width="100%">
     <tr>
-      <td align="left"><img src="/docs/content/cube.png" alt="Cube" width="50"/></td>
+      <td align="left"><img src="/docs/content/cube.svg" alt="Cube" width="50"/></td>
       <td align="right"><h3>Документация → Управление игрой</h3></td>
     </tr>
   </table>
@@ -104,3 +104,5 @@ PSE.player
   </tr>
 </table>
 </div>
+
+
