@@ -605,8 +605,10 @@ function buildManifest() {
     sections
   };
 
-  fs.writeFileSync(OUTPUT, JSON.stringify(manifest, null, 2) + '\n', 'utf8');
-  console.log(`✓ ${OUTPUT} — ${sections.length} sections from ${DOCS_DIR}`);
+  const json = JSON.stringify(manifest);
+  fs.writeFileSync(OUTPUT, json + '\n', 'utf8');
+  const bytes = Buffer.byteLength(json, 'utf8');
+  console.log(`✓ ${OUTPUT} — ${sections.length} sections, ${(bytes / 1024).toFixed(1)} KB`);
   console.log(`  RAW_BASE = ${RAW_BASE}`);
   sections.forEach(s => console.log(`  • ${s.sourceFile} → "${s.title}"`));
 }
