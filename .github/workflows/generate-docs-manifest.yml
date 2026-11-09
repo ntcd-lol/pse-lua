@@ -38,13 +38,12 @@ jobs:
           GIST_ID: ${{ vars.GIST_ID }}
         run: |
           if [ -z "$GIST_ID" ]; then
-            echo "::error::GIST_ID is empty. Add it in Settings → Variables (not Secrets)."
+            echo "::error::GIST_ID is empty. Add it in Settings → Variables."
             exit 1
           fi
 
           GIST_FILENAME="pselua-manifest.json"
 
-          # --rawfile читает файл на стороне jq, не через argv — обходит лимит
           jq -n \
             --rawfile content manifest.json \
             --arg fname "$GIST_FILENAME" \
