@@ -136,10 +136,17 @@ function stripHtmlComments(md) {
 }
 
 function stripFooterNav(md) {
-  return md.replace(
-    /(?:^|\n)\s*(?:---\s*\n\s*)?<div[^>]*align\s*=\s*["']center["'][^>]*>\s*<table[\s\S]*?<a\s[^>]*href[\s\S]*?<\/table>\s*<\/div>\s*$/i,
-    ''
-  );
+  const trimmed = md.replace(/\s+$/, '');
+  const lastHr = trimmed.lastIndexOf('\n---');
+  if (lastHr === -1) return md;
+  const tail = trimmed.slice(lastHr + 4).trim();
+  if (!tail) return md;
+  if (!/^<div[^>]*align\s*=\s*["']center["'][^>]*>/i.test(tail)) return md;
+  if (!/<\/div>$/i.test(tail)) return md;
+  if (!/<a\s[^>]*href/i.test(tail)) return md;
+  if (/^#{1,6}\s/m.test(tail)) return md;
+
+  return trimmed.slice(0, lastHr).replace(/\s+$/, '');
 }
 
 function rewriteAssetUrls(markdown, fileDir) {
