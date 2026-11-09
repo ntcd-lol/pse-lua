@@ -6,6 +6,9 @@ const DOCS_DIR = process.env.DOCS_DIR || './docs';
 const OUTPUT   = process.env.OUTPUT   || './manifest.json';
 const PROJECT  = process.env.PROJECT  || 'pse-lua';
 const OWNER    = process.env.OWNER    || 'ntcd-lol';
+const BRANCH   = process.env.BRANCH   || 'main';
+const RAW_BASE = process.env.RAW_BASE ||
+  `https://raw.githubusercontent.com/${OWNER}/${PROJECT}/${BRANCH}`;
 
 function parseInline(text) {
   const nodes = [];
@@ -21,6 +24,7 @@ function parseInline(text) {
   while (i < text.length) {
     const ch = text[i];
 
+    // `code`
     if (ch === '`') {
       const end = text.indexOf('`', i + 1);
       if (end !== -1) {
@@ -30,6 +34,7 @@ function parseInline(text) {
       }
     }
 
+    // **bold**
     if (ch === '*' && text[i + 1] === '*') {
       const end = text.indexOf('**', i + 2);
       if (end !== -1) {
@@ -39,6 +44,7 @@ function parseInline(text) {
       }
     }
 
+    // *italic*
     if (ch === '*') {
       const end = text.indexOf('*', i + 1);
       if (end !== -1) {
@@ -48,6 +54,24 @@ function parseInline(text) {
       }
     }
 
+    // ![alt](url) — картинка
+    if (ch === '!' && text[i + 1] === '[') {
+      const close = text.indexOf(']', i + 2);
+      if (close !== -1 && text[close + 1] === '(') {
+        const paren = text.indexOf(')', close + 2);
+        if (paren !== -1) {
+          nodes.push({
+            type: 'image',
+            alt: text.slice(i + 2, close),
+            src: absAsset(text.slice(close + 2, paren))
+          });
+          i = paren + 1;
+          continue;
+        }
+      }
+    }
+
+    // [text](url) — ссылка
     if (ch === '[') {
       const close = text.indexOf(']', i + 1);
       if (close !== -1 && text[close + 1] === '(') {
@@ -56,7 +80,7 @@ function parseInline(text) {
           nodes.push({
             type: 'link',
             text: text.slice(i + 1, close),
-            href: text.slice(close + 2, paren)
+            href: absAsset(text.slice(close + 2, paren))
           });
           i = paren + 1;
           continue;
@@ -64,13 +88,49 @@ function parseInline(text) {
       }
     }
 
+    // обычный текст до спецсимвола
     let j = i + 1;
-    while (j < text.length && !'`*['.includes(text[j])) j++;
+    while (j < text.length && !'`*!['.includes(text[j])) j++;
     pushText(text.slice(i, j));
     i = j;
   }
 
   return nodes;
+}
+
+function absAsset(p) {
+  if (!p) return p;
+  if (p.startsWith('#')) return p;
+  if (p.startsWith('//')) return p;
+  if (/^https?:\/\//i.test(p)) return p;
+  if (p.startsWith('/')) return RAW_BASE + p;
+  return p;
+}
+
+function rewriteAssetUrls(markdown) {
+  let s = markdown;
+
+  // ![alt](/path)  →  ![alt](RAW_BASE/path)
+  s = s.replace(/!\[([^\]]*)\]\((\/[^)\s]+)\)/g, (_, alt, p) => {
+    return `![${alt}](${RAW_BASE}${p})`;
+  });
+
+  // [text](/path)  →  [text](RAW_BASE/path)   (только не после !)
+  s = s.replace(/(?<!!)\[([^\]]*)\]\((\/[^)\s]+)\)/g, (_, text, p) => {
+    if (p.startsWith('//')) return `[${text}](${p})`;
+    return `[${text}](${RAW_BASE}${p})`;
+  });
+
+  // HTML: src="/path"
+  s = s.replace(/\bsrc=(["'])(\/[^"']+)\1/g, (_, q, p) => `src=${q}${RAW_BASE}${p}${q}`);
+
+  // HTML: href="/path"
+  s = s.replace(/\bhref=(["'])(\/[^"']+)\1/g, (_, q, p) => {
+    if (p.startsWith('//')) return `href=${q}${p}${q}`;
+    return `href=${q}${RAW_BASE}${p}${q}`;
+  });
+
+  return s;
 }
 
 function isTableRow(line) {
@@ -116,7 +176,11 @@ function parseList(lines, start) {
   return { block: { type: 'list', ordered, items }, nextIndex: i };
 }
 
-const HTML_PAIR_TAGS = 'div|table|thead|tbody|tr|td|th|span|p|ul|ol|li|a|h[1-6]|section|article|header|footer|nav|main|figure|figcaption|details|summary|strong|em|b|i|code|pre|blockquote';
+const HTML_PAIR_TAGS =
+  'div|table|thead|tbody|tr|td|th|span|p|ul|ol|li|a|h[1-6]|' +
+  'section|article|header|footer|nav|main|figure|figcaption|' +
+  'details|summary|strong|em|b|i|code|pre|blockquote';
+
 const HTML_OPEN_RE  = new RegExp(`<(${HTML_PAIR_TAGS})\\b[^>]*>`, 'gi');
 const HTML_CLOSE_RE = new RegExp(`</(${HTML_PAIR_TAGS})\\s*>`, 'gi');
 
@@ -144,12 +208,12 @@ function parseHtmlBlock(lines, start) {
     if (started && depth <= 0) break;
   }
 
-  return { block: { type: 'html', content: htmlLines.join('\n').trim() }, nextIndex: i };
+  return {
+    block: { type: 'html', content: htmlLines.join('\n').trim() },
+    nextIndex: i
+  };
 }
 
-/* ============================================================
- * ОСНОВНОЙ ПАРСЕР
- * ============================================================ */
 function parseMarkdownToBlocks(markdown) {
   const lines = markdown.split('\n');
   const blocks = [];
@@ -166,6 +230,7 @@ function parseMarkdownToBlocks(markdown) {
   while (i < lines.length) {
     const line = lines[i];
 
+    // ---- HTML-блок ----
     if (isHtmlStart(line)) {
       flushParagraph();
       const { block, nextIndex } = parseHtmlBlock(lines, i);
@@ -174,6 +239,7 @@ function parseMarkdownToBlocks(markdown) {
       continue;
     }
 
+    // ---- code fence ----
     const fence = line.match(/^```(\w*)\s*$/);
     if (fence) {
       flushParagraph();
@@ -189,6 +255,7 @@ function parseMarkdownToBlocks(markdown) {
       continue;
     }
 
+    // ---- heading ----
     const h = line.match(/^(#{1,6})\s+(.+?)\s*$/);
     if (h) {
       flushParagraph();
@@ -197,6 +264,7 @@ function parseMarkdownToBlocks(markdown) {
       continue;
     }
 
+    // ---- table ----
     if (isTableRow(line) && i + 1 < lines.length && isTableSeparator(lines[i + 1])) {
       flushParagraph();
       const { block, nextIndex } = parseTable(lines, i);
@@ -207,6 +275,7 @@ function parseMarkdownToBlocks(markdown) {
       continue;
     }
 
+    // ---- list ----
     if (isListItem(line)) {
       flushParagraph();
       const { block, nextIndex } = parseList(lines, i);
@@ -216,6 +285,7 @@ function parseMarkdownToBlocks(markdown) {
       continue;
     }
 
+    // ---- hr ----
     if (/^\s*---+\s*$/.test(line)) {
       flushParagraph();
       blocks.push({ type: 'hr' });
@@ -223,6 +293,7 @@ function parseMarkdownToBlocks(markdown) {
       continue;
     }
 
+    // ---- пустая строка ----
     if (line.trim() === '') {
       flushParagraph();
       i++;
@@ -244,6 +315,9 @@ function stripServiceHtml(content) {
   return s.trim();
 }
 
+/* ============================================================
+ * СБОР МАНИФЕСТА
+ * ============================================================ */
 function collectMarkdownFiles(dir) {
   const out = [];
   const walk = (current) => {
@@ -270,14 +344,18 @@ function buildManifest() {
     const title = data.title || id;
     const order = typeof data.order === 'number' ? data.order : index;
 
-    const cleaned = content;
+    // переписываем абсолютные пути на raw-URL GitHub
+    const rewritten = rewriteAssetUrls(content);
+
+    // шапку НЕ вырезаем — рендерим как html-блок
+    const blocks = parseMarkdownToBlocks(rewritten);
 
     return {
       id,
       title,
       sourceFile: rel,
       order,
-      blocks: parseMarkdownToBlocks(cleaned)
+      blocks
     };
   });
 
@@ -293,6 +371,7 @@ function buildManifest() {
 
   fs.writeFileSync(OUTPUT, JSON.stringify(manifest, null, 2) + '\n', 'utf8');
   console.log(`✓ ${OUTPUT} — ${sections.length} sections from ${DOCS_DIR}`);
+  console.log(`  RAW_BASE = ${RAW_BASE}`);
 }
 
 buildManifest();
