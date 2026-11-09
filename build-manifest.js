@@ -10,6 +10,23 @@ const BRANCH   = process.env.BRANCH   || 'main';
 const RAW_BASE = process.env.RAW_BASE ||
   `https://raw.githubusercontent.com/${OWNER}/${PROJECT}/${BRANCH}`;
 
+function findRepoRoot(start) {
+  let dir = path.resolve(start);
+  while (true) {
+    if (fs.existsSync(path.join(dir, '.git'))) return dir;
+    const parent = path.dirname(dir);
+    if (parent === dir) return path.resolve(start);
+    dir = parent;
+  }
+}
+
+const REPO_ROOT = findRepoRoot(process.cwd());
+
+function toRepoRelative(filePath) {
+  const abs = path.resolve(filePath);
+  return path.relative(REPO_ROOT, abs).split(path.sep).join('/');
+}
+
 function slugify(text) {
   const map = {
     'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'yo','ж':'zh',
@@ -496,33 +513,46 @@ function collectDocs() {
   return files;
 }
 
-function computeOrder(rel, data, index, isRootReadme) {
-  if (typeof data.order === 'number') return data.order;
-  if (isRootReadme) return -1000;
+function loadOrderMap() {
+  const candidates = [
+    path.join(DOCS_DIR, '_list.json'),
+    path.join(DOCS_DIR, '.order.json'),
+    'docs/_list.json',
+    '_list.json'
+  ];
 
-  const noExt = rel.endsWith('.md') ? rel.slice(0, -3) : rel;
-  const parts = noExt.split('/');
-
-  let weight = parts.length * 1000;
-
-  const last = parts[parts.length - 1];
-  if (last === 'index') weight -= 500;
-
-  const alphaKey = noExt.replace(/\//g, '-');
-  let alphaNum = 0;
-  for (let i = 0; i < Math.min(alphaKey.length, 6); i++) {
-    alphaNum = alphaNum * 36 + (parseInt(alphaKey[i], 36) || 0);
+  for (const p of candidates) {
+    if (fs.existsSync(p)) {
+      try {
+        const data = JSON.parse(fs.readFileSync(p, 'utf8'));
+        if (data && typeof data === 'object' && !Array.isArray(data)) {
+          console.log(`  order map: ${p} (${Object.keys(data).length} entries)`);
+          return data;
+        }
+      } catch (e) {
+        console.warn(`⚠ failed to parse ${p}: ${e.message}`);
+      }
+    }
   }
+  return {};
+}
 
-  return weight + (alphaNum % 1000);
+function computeOrder(repoRel, data, index, isRootReadme, orderMap) {
+  if (typeof data.order === 'number') return data.order;
+  if (orderMap && typeof orderMap[repoRel] === 'number') return orderMap[repoRel];
+  if (isRootReadme) return -1000;
+  return 10000 + index;
 }
 
 function buildManifest() {
   const files = collectDocs();
+  const orderMap = loadOrderMap();
 
   const sections = files.map((file, index) => {
     let rel = path.relative(DOCS_DIR, file).split(path.sep).join('/');
     if (rel.startsWith('..')) rel = path.basename(file);
+
+    const repoRel = toRepoRelative(file);
 
     const raw = fs.readFileSync(file, 'utf8');
     const { data, content } = matter(raw);
@@ -533,8 +563,8 @@ function buildManifest() {
     const fromHeader = extractHeadingFromHeader(content);
     const title = data.title || fromHeader || id;
 
-    const isRootReadme = file === path.resolve('README.md');
-    const order = computeOrder(rel, data, index, isRootReadme);
+    const isRootReadme = path.resolve(file) === path.resolve('README.md');
+    const order = computeOrder(repoRel, data, index, isRootReadme, orderMap);
 
     const relDir = path.dirname(rel).split(path.sep).join('/');
     const fileDir = relDir === '.' ? '' : relDir;
@@ -543,13 +573,7 @@ function buildManifest() {
     const rewritten = rewriteAssetUrls(withoutComments, fileDir);
     const blocks = parseMarkdownToBlocks(rewritten);
 
-    return {
-      id,
-      title,
-      sourceFile: rel,
-      order,
-      blocks
-    };
+    return { id, title, sourceFile: rel, order, blocks };
   });
 
   for (const s of sections) {

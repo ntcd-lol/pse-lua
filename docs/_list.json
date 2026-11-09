@@ -1,0 +1,13 @@
+{
+  "README.md": 0,
+  "docs/api.md": 10,
+  "docs/events.md": 8,
+  "docs/game.md": 4,
+  "docs/init/index.md": 1,
+  "docs/init/mock.md": 2,
+  "docs/init/repl.md": 3,
+  "docs/objects/index.md": 5,
+  "docs/objects/player.md": 6,
+  "docs/objects/third.md": 7,
+  "docs/registers.md": 9
+}
