@@ -1,7 +1,3 @@
-  
-  
-  
-
 const fs = require('fs');
 const path = require('path');
 const matter = require('gray-matter');
@@ -11,10 +7,6 @@ const OUTPUT   = process.env.OUTPUT   || './manifest.json';
 const PROJECT  = process.env.PROJECT  || 'pse-lua';
 const OWNER    = process.env.OWNER    || 'ntcd-lol';
 
-/* ============================================================
- * INLINE-РАЗМЕТКА
- * Поддерживает: `code`, **bold**, *italic*, [text](url)
- * ============================================================ */
 function parseInline(text) {
   const nodes = [];
   let i = 0;
@@ -113,9 +105,6 @@ function parseTable(lines, start) {
   return { block: { type: 'table', header, rows }, nextIndex: i };
 }
 
-/* ============================================================
- * СПИСКИ
- * ============================================================ */
 function isListItem(line) {
   return /^\s*([-*+]|\d+\.)\s+/.test(line);
 }
@@ -135,9 +124,6 @@ function parseList(lines, start) {
   return { block: { type: 'list', ordered, items }, nextIndex: i };
 }
 
-/* ============================================================
- * HTML-БЛОК
- * ============================================================ */
 const HTML_PAIR_TAGS = 'div|table|thead|tbody|tr|td|th|span|p|ul|ol|li|a|h[1-6]|section|article|header|footer|nav|main';
 const HTML_OPEN_RE  = new RegExp(`<(${HTML_PAIR_TAGS})\\b[^>]*>`, 'gi');
 const HTML_CLOSE_RE = new RegExp(`</(${HTML_PAIR_TAGS})\\s*>`, 'gi');
@@ -169,9 +155,6 @@ function parseHtmlBlock(lines, start) {
   return { block: { type: 'html', content: htmlLines.join('\n').trim() }, nextIndex: i };
 }
 
-/* ============================================================
- * ОСНОВНОЙ ПАРСЕР MARKDOWN → BLOCKS
- * ============================================================ */
 function parseMarkdownToBlocks(markdown) {
   const lines = markdown.split('\n');
   const blocks = [];
@@ -266,11 +249,6 @@ function parseMarkdownToBlocks(markdown) {
   return blocks;
 }
 
-/* ============================================================
- * ВЫРЕЗАНИЕ ШАПКИ/ФУТЕРА
- * В каждом .md сверху и снизу — одинаковый HTML с cube.png и
- * навигацией. Вырезаем его, чтобы не дублировать на сайте.
- * ============================================================ */
 function stripServiceHtml(content) {
   let s = content;
 
@@ -288,9 +266,6 @@ function stripServiceHtml(content) {
   return s.trim();
 }
 
-/* ============================================================
- * СБОРКА MANIFEST
- * ============================================================ */
 function collectMarkdownFiles(dir) {
   const out = [];
   const walk = (current) => {
