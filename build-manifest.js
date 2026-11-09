@@ -1,3 +1,7 @@
+  
+  
+  
+
 const fs = require('fs');
 const path = require('path');
 const matter = require('gray-matter');
@@ -7,42 +11,61 @@ const OUTPUT   = process.env.OUTPUT   || './manifest.json';
 const PROJECT  = process.env.PROJECT  || 'pse-lua';
 const OWNER    = process.env.OWNER    || 'ntcd-lol';
 
+/* ============================================================
+ * INLINE-РАЗМЕТКА
+ * Поддерживает: `code`, **bold**, *italic*, [text](url)
+ * ============================================================ */
 function parseInline(text) {
   const nodes = [];
   let i = 0;
-  const push = (node) => { if (node) nodes.push(node); };
+
+  const pushText = (value) => {
+    if (!value) return;
+    const last = nodes[nodes.length - 1];
+    if (last && last.type === 'text') last.value += value;
+    else nodes.push({ type: 'text', value });
+  };
 
   while (i < text.length) {
-    if (text[i] === '`') {
+    const ch = text[i];
+
+      
+    if (ch === '`') {
       const end = text.indexOf('`', i + 1);
       if (end !== -1) {
-        push({ type: 'code', value: text.slice(i + 1, end) });
+        nodes.push({ type: 'code', value: text.slice(i + 1, end) });
         i = end + 1;
         continue;
       }
     }
-    if (text[i] === '*' && text[i + 1] === '*') {
+
+      
+    if (ch === '*' && text[i + 1] === '*') {
       const end = text.indexOf('**', i + 2);
       if (end !== -1) {
-        push({ type: 'bold', value: text.slice(i + 2, end) });
+        nodes.push({ type: 'bold', value: text.slice(i + 2, end) });
         i = end + 2;
         continue;
       }
     }
-    if (text[i] === '*') {
+
+      
+    if (ch === '*') {
       const end = text.indexOf('*', i + 1);
       if (end !== -1) {
-        push({ type: 'italic', value: text.slice(i + 1, end) });
+        nodes.push({ type: 'italic', value: text.slice(i + 1, end) });
         i = end + 1;
         continue;
       }
     }
-    if (text[i] === '[') {
+
+      
+    if (ch === '[') {
       const close = text.indexOf(']', i + 1);
       if (close !== -1 && text[close + 1] === '(') {
         const paren = text.indexOf(')', close + 2);
         if (paren !== -1) {
-          push({
+          nodes.push({
             type: 'link',
             text: text.slice(i + 1, close),
             href: text.slice(close + 2, paren)
@@ -52,23 +75,20 @@ function parseInline(text) {
         }
       }
     }
+
+      
     let j = i + 1;
     while (j < text.length && !'`*['.includes(text[j])) j++;
-    push({ type: 'text', value: text.slice(i, j) });
+    pushText(text.slice(i, j));
     i = j;
   }
 
-  const merged = [];
-  for (const n of nodes) {
-    if (n.type === 'text' && merged.length && merged[merged.length - 1].type === 'text') {
-      merged[merged.length - 1].value += n.value;
-    } else {
-      merged.push(n);
-    }
-  }
-  return merged;
+  return nodes;
 }
 
+/* ============================================================
+ * ТАБЛИЦЫ
+ * ============================================================ */
 function isTableRow(line) {
   return /^\s*\|.*\|\s*$/.test(line);
 }
@@ -93,13 +113,16 @@ function parseTable(lines, start) {
   return { block: { type: 'table', header, rows }, nextIndex: i };
 }
 
+/* ============================================================
+ * СПИСКИ
+ * ============================================================ */
 function isListItem(line) {
   return /^\s*([-*+]|\d+\.)\s+/.test(line);
 }
 function parseList(lines, start) {
   const items = [];
   let i = start;
-  let ordered = /^\s*\d+\./.test(lines[start]);
+  const ordered = /^\s*\d+\./.test(lines[start]);
   while (i < lines.length && isListItem(lines[i])) {
     const m = lines[i].match(/^\s*([-*+]|\d+\.)\s+(.*)$/);
     items.push(m[2]);
@@ -112,51 +135,72 @@ function parseList(lines, start) {
   return { block: { type: 'list', ordered, items }, nextIndex: i };
 }
 
+/* ============================================================
+ * HTML-БЛОК
+ * ============================================================ */
+const HTML_PAIR_TAGS = 'div|table|thead|tbody|tr|td|th|span|p|ul|ol|li|a|h[1-6]|section|article|header|footer|nav|main';
+const HTML_OPEN_RE  = new RegExp(`<(${HTML_PAIR_TAGS})\\b[^>]*>`, 'gi');
+const HTML_CLOSE_RE = new RegExp(`</(${HTML_PAIR_TAGS})\\s*>`, 'gi');
+
+function isHtmlStart(line) {
+  return /^\s*<(div|table|section|article|header|footer|nav|main|p|ul|ol|h[1-6])\b/i.test(line);
+}
+
+function parseHtmlBlock(lines, start) {
+  const htmlLines = [];
+  let depth = 0;
+  let started = false;
+  let i = start;
+
+  while (i < lines.length) {
+    const l = lines[i];
+    htmlLines.push(l);
+
+    const opens  = (l.match(HTML_OPEN_RE)  || []).length;
+    const closes = (l.match(HTML_CLOSE_RE) || []).length;
+    depth += opens - closes;
+    if (opens > 0) started = true;
+
+    i++;
+
+    if (started && depth <= 0) break;
+  }
+
+  return { block: { type: 'html', content: htmlLines.join('\n').trim() }, nextIndex: i };
+}
+
+/* ============================================================
+ * ОСНОВНОЙ ПАРСЕР MARKDOWN → BLOCKS
+ * ============================================================ */
 function parseMarkdownToBlocks(markdown) {
   const lines = markdown.split('\n');
   const blocks = [];
   let i = 0;
+  let para = [];
 
-  const flushParagraph = (buf) => {
-    const text = buf.join('\n').trim();
+  const flushParagraph = () => {
+    const text = para.join('\n').trim();
+    para = [];
     if (!text) return;
     blocks.push({ type: 'prose', inline: parseInline(text) });
   };
 
-  let para = [];
-
   while (i < lines.length) {
     const line = lines[i];
 
-    if (/^\s*</.test(line)) {
-      flushParagraph(para); para = [];
-
-      const htmlLines = [];
-      let depth = 0;
-      let started = false;
-
-      while (i < lines.length) {
-        const l = lines[i];
-        htmlLines.push(l);
-
-        const opens  = (l.match(/<(div|table|tr|td|th|thead|tbody|span|p|ul|ol|li|a|h[1-6])\b[^>]*>/gi) || []).length;
-        const closes = (l.match(/<\/(div|table|tr|td|th|thead|tbody|span|p|ul|ol|li|a|h[1-6])\s*>/gi) || []).length;
-        depth += opens - closes;
-        if (opens > 0) started = true;
-
-        i++;
-
-        if (started && depth <= 0) break;
-      }
-
-      const html = htmlLines.join('\n').trim();
-      if (html) blocks.push({ type: 'html', content: html });
+      
+    if (isHtmlStart(line)) {
+      flushParagraph();
+      const { block, nextIndex } = parseHtmlBlock(lines, i);
+      blocks.push(block);
+      i = nextIndex;
       continue;
     }
 
-    const fence = line.match(/^```(\w*)\s*$/);
+      
+    const fence = line.match(/^```(  *)\s*$/);
     if (fence) {
-      flushParagraph(para); para = [];
+      flushParagraph();
       const lang = fence[1] || 'text';
       const codeLines = [];
       i++;
@@ -169,16 +213,18 @@ function parseMarkdownToBlocks(markdown) {
       continue;
     }
 
+      
     const h = line.match(/^(#{1,6})\s+(.+?)\s*$/);
     if (h) {
-      flushParagraph(para); para = [];
+      flushParagraph();
       blocks.push({ type: 'heading', level: h[1].length, inline: parseInline(h[2]) });
       i++;
       continue;
     }
 
+      
     if (isTableRow(line) && i + 1 < lines.length && isTableSeparator(lines[i + 1])) {
-      flushParagraph(para); para = [];
+      flushParagraph();
       const { block, nextIndex } = parseTable(lines, i);
       block.header = block.header.map(parseInline);
       block.rows   = block.rows.map(r => r.map(parseInline));
@@ -187,8 +233,9 @@ function parseMarkdownToBlocks(markdown) {
       continue;
     }
 
+      
     if (isListItem(line)) {
-      flushParagraph(para); para = [];
+      flushParagraph();
       const { block, nextIndex } = parseList(lines, i);
       block.items = block.items.map(parseInline);
       blocks.push(block);
@@ -196,15 +243,17 @@ function parseMarkdownToBlocks(markdown) {
       continue;
     }
 
+      
     if (/^\s*---+\s*$/.test(line)) {
-      flushParagraph(para); para = [];
+      flushParagraph();
       blocks.push({ type: 'hr' });
       i++;
       continue;
     }
 
+      
     if (line.trim() === '') {
-      flushParagraph(para); para = [];
+      flushParagraph();
       i++;
       continue;
     }
@@ -212,10 +261,36 @@ function parseMarkdownToBlocks(markdown) {
     para.push(line);
     i++;
   }
-  flushParagraph(para);
+  flushParagraph();
+
   return blocks;
 }
 
+/* ============================================================
+ * ВЫРЕЗАНИЕ ШАПКИ/ФУТЕРА
+ * В каждом .md сверху и снизу — одинаковый HTML с cube.png и
+ * навигацией. Вырезаем его, чтобы не дублировать на сайте.
+ * ============================================================ */
+function stripServiceHtml(content) {
+  let s = content;
+
+    
+  s = s.replace(
+    /^\s*<div[^>]*align\s*=\s*["']center["'][^>]*>[\s\S]*?<\/div>\s*(?:---\s*)?/i,
+    ''
+  );
+
+  s = s.replace(
+    /(?:---\s*)?<div[^>]*align\s*=\s*["']center["'][^>]*>[\s\S]*?<\/div>\s*$/i,
+    ''
+  );
+
+  return s.trim();
+}
+
+/* ============================================================
+ * СБОРКА MANIFEST
+ * ============================================================ */
 function collectMarkdownFiles(dir) {
   const out = [];
   const walk = (current) => {
@@ -231,17 +306,24 @@ function collectMarkdownFiles(dir) {
 
 function buildManifest() {
   const files = collectMarkdownFiles(DOCS_DIR);
+
   const sections = files.map((file, index) => {
     const rel = path.relative(DOCS_DIR, file).replace(/\\/g, '/');
     const raw = fs.readFileSync(file, 'utf8');
     const { data, content } = matter(raw);
-    const id = data.id || rel.replace(/\.md$/, '').replace(/\//g, '-');
+
+    const id    = data.id    || rel.replace(/\.md$/, '').replace(/\  
+    const title = data.title || id;
+    const order = typeof data.order === 'number' ? data.order : index;
+
+    const cleaned = stripServiceHtml(content);
+
     return {
       id,
-      title: data.title || id,
+      title,
       sourceFile: rel,
-      order: typeof data.order === 'number' ? data.order : index,
-      blocks: parseMarkdownToBlocks(content)
+      order,
+      blocks: parseMarkdownToBlocks(cleaned)
     };
   });
 
