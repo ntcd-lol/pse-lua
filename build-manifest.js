@@ -104,9 +104,7 @@ function absAsset(p) {
 function rewriteAssetUrls(markdown) {
   let s = markdown;
 
-  s = s.replace(/!\[([^\]]*)\]\((\/[^)\s]+)\)/g, (_, alt, p) => {
-    return `![${alt}](${RAW_BASE}${p})`;
-  });
+  s = s.replace(/!\[([^\]]*)\]\((\/[^)\s]+)\)/g, (_, alt, p) => `![${alt}](${RAW_BASE}${p})`);
 
   s = s.replace(/(?<!!)\[([^\]]*)\]\((\/[^)\s]+)\)/g, (_, text, p) => {
     if (p.startsWith('//')) return `[${text}](${p})`;
@@ -144,6 +142,47 @@ function extractHeadingFromHeader(content) {
   text = text.replace(/^Документация\s*[:\-–—]?\s*/i, '').trim();
 
   return text || null;
+}
+
+const CALLOUT_VARIANTS = new Set(['note', 'tip', 'important', 'warning', 'caution', 'danger', 'info']);
+
+function isCalloutStart(line) {
+  return /^\s*>\s*\[!(\w+)\]\s*$/i.test(line);
+}
+
+function parseCallout(lines, start) {
+  const m = lines[start].match(/^\s*>\s*\[!(\w+)\]\s*$/i);
+  const variant = (m[1] || 'note').toLowerCase();
+  const safeVariant = CALLOUT_VARIANTS.has(variant) ? variant : 'note';
+
+  const bodyLines = [];
+  let i = start + 1;
+
+  while (i < lines.length) {
+    const l = lines[i];
+
+    if (l.trim() === '') {
+      if (i + 1 < lines.length && /^\s*>/.test(lines[i + 1])) {
+        bodyLines.push('');
+        i++;
+        continue;
+      }
+      break;
+    }
+
+    const q = l.match(/^\s*>\s?(.*)$/);
+    if (!q) break;
+
+    bodyLines.push(q[1]);
+    i++;
+  }
+
+  const text = bodyLines.join('\n').trim();
+
+  return {
+    block: { type: 'callout', variant: safeVariant, inline: parseInline(text) },
+    nextIndex: i
+  };
 }
 
 function isTableRow(line) {
@@ -223,47 +262,6 @@ function parseHtmlBlock(lines, start) {
 
   return {
     block: { type: 'html', content: htmlLines.join('\n').trim() },
-    nextIndex: i
-  };
-}
-
-const CALLOUT_VARIANTS = new Set(['note', 'tip', 'important', 'warning', 'caution', 'danger', 'info']);
-
-function isCalloutStart(line) {
-  return /^\s*>\s*\[!(\w+)\]\s*$/i.test(line);
-}
-
-function parseCallout(lines, start) {
-  const m = lines[start].match(/^\s*>\s*\[!(\w+)\]\s*$/i);
-  const variant = (m[1] || 'note').toLowerCase();
-  const safeVariant = CALLOUT_VARIANTS.has(variant) ? variant : 'note';
-
-  const bodyLines = [];
-  let i = start + 1;
-
-  while (i < lines.length) {
-    const l = lines[i];
-
-    if (l.trim() === '') {
-      if (i + 1 < lines.length && /^\s*>/.test(lines[i + 1])) {
-        bodyLines.push('');
-        i++;
-        continue;
-      }
-      break;
-    }
-
-    const q = l.match(/^\s*>\s?(.*)$/);
-    if (!q) break;
-
-    bodyLines.push(q[1]);
-    i++;
-  }
-
-  const text = bodyLines.join('\n').trim();
-
-  return {
-    block: { type: 'callout', variant: safeVariant, inline: parseInline(text) },
     nextIndex: i
   };
 }
@@ -378,13 +376,11 @@ function collectMarkdownFiles(dir) {
 
 function collectDocs() {
   const files = collectMarkdownFiles(DOCS_DIR);
-
   const rootReadme = path.resolve('README.md');
   const hasRootReadme = files.some(f => path.resolve(f) === rootReadme);
   if (!hasRootReadme && fs.existsSync(rootReadme)) {
     files.unshift(rootReadme);
   }
-
   return files;
 }
 
