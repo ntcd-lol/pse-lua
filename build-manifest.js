@@ -104,7 +104,6 @@ function parseList(lines, start) {
     const m = lines[i].match(/^\s*([-*+]|\d+\.)\s+(.*)$/);
     items.push(m[2]);
     i++;
-    // многострочные элементы списка — строки с отступом
     while (i < lines.length && /^\s{2,}\S/.test(lines[i]) && !isListItem(lines[i])) {
       items[items.length - 1] += ' ' + lines[i].trim();
       i++;
@@ -129,6 +128,32 @@ function parseMarkdownToBlocks(markdown) {
   while (i < lines.length) {
     const line = lines[i];
 
+    if (/^\s*</.test(line)) {
+      flushParagraph(para); para = [];
+
+      const htmlLines = [];
+      let depth = 0;
+      let started = false;
+
+      while (i < lines.length) {
+        const l = lines[i];
+        htmlLines.push(l);
+
+        const opens  = (l.match(/<(div|table|tr|td|th|thead|tbody|span|p|ul|ol|li|a|h[1-6])\b[^>]*>/gi) || []).length;
+        const closes = (l.match(/<\/(div|table|tr|td|th|thead|tbody|span|p|ul|ol|li|a|h[1-6])\s*>/gi) || []).length;
+        depth += opens - closes;
+        if (opens > 0) started = true;
+
+        i++;
+
+        if (started && depth <= 0) break;
+      }
+
+      const html = htmlLines.join('\n').trim();
+      if (html) blocks.push({ type: 'html', content: html });
+      continue;
+    }
+
     const fence = line.match(/^```(\w*)\s*$/);
     if (fence) {
       flushParagraph(para); para = [];
@@ -139,7 +164,7 @@ function parseMarkdownToBlocks(markdown) {
         codeLines.push(lines[i]);
         i++;
       }
-      i++; // закрывающий ```
+      i++;
       blocks.push({ type: 'code', language: lang, content: codeLines.join('\n') });
       continue;
     }
@@ -147,11 +172,7 @@ function parseMarkdownToBlocks(markdown) {
     const h = line.match(/^(#{1,6})\s+(.+?)\s*$/);
     if (h) {
       flushParagraph(para); para = [];
-      blocks.push({
-        type: 'heading',
-        level: h[1].length,
-        inline: parseInline(h[2])
-      });
+      blocks.push({ type: 'heading', level: h[1].length, inline: parseInline(h[2]) });
       i++;
       continue;
     }
@@ -159,7 +180,6 @@ function parseMarkdownToBlocks(markdown) {
     if (isTableRow(line) && i + 1 < lines.length && isTableSeparator(lines[i + 1])) {
       flushParagraph(para); para = [];
       const { block, nextIndex } = parseTable(lines, i);
-      // инлайн-разметку в ячейках тоже парсим
       block.header = block.header.map(parseInline);
       block.rows   = block.rows.map(r => r.map(parseInline));
       blocks.push(block);
@@ -193,7 +213,6 @@ function parseMarkdownToBlocks(markdown) {
     i++;
   }
   flushParagraph(para);
-
   return blocks;
 }
 
