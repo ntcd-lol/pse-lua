@@ -59,7 +59,7 @@ function parseInline(text) {
           nodes.push({
             type: 'image',
             alt: text.slice(i + 2, close),
-            src: absAsset(text.slice(close + 2, paren))
+            src: text.slice(close + 2, paren)
           });
           i = paren + 1;
           continue;
@@ -75,7 +75,7 @@ function parseInline(text) {
           nodes.push({
             type: 'link',
             text: text.slice(i + 1, close),
-            href: absAsset(text.slice(close + 2, paren))
+            href: text.slice(close + 2, paren)
           });
           i = paren + 1;
           continue;
@@ -92,30 +92,35 @@ function parseInline(text) {
   return nodes;
 }
 
-function absAsset(p) {
-  if (!p) return p;
-  if (p.startsWith('#')) return p;
-  if (p.startsWith('//')) return p;
-  if (/^https?:\/\//i.test(p)) return p;
-  if (p.startsWith('/')) return RAW_BASE + p;
-  return p;
+function stripHtmlComments(md) {
+  return md.replace(/<!--[\s\S]*?-->/g, '');
 }
 
-function rewriteAssetUrls(markdown) {
+function rewriteAssetUrls(markdown, fileDir) {
+  const joinBase = (p) => {
+    if (!p) return p;
+    if (p.startsWith('#')) return p;
+    if (p.startsWith('//')) return p;
+    if (/^https?:\/\//i.test(p)) return p;
+    if (p.startsWith('/')) return RAW_BASE + p;
+    const clean = p.replace(/^\.\//, '');
+    const prefix = fileDir ? `${fileDir}/` : '';
+    return `${RAW_BASE}/${prefix}${clean}`;
+  };
+
   let s = markdown;
 
-  s = s.replace(/!\[([^\]]*)\]\((\/[^)\s]+)\)/g, (_, alt, p) => `![${alt}](${RAW_BASE}${p})`);
+  s = s.replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g, (_, alt, p) => `![${alt}](${joinBase(p)})`);
 
-  s = s.replace(/(?<!!)\[([^\]]*)\]\((\/[^)\s]+)\)/g, (_, text, p) => {
-    if (p.startsWith('//')) return `[${text}](${p})`;
-    return `[${text}](${RAW_BASE}${p})`;
+  s = s.replace(/(?<!!)\[([^\]]*)\]\(([^)\s]+)\)/g, (_, text, p) => {
+    if (p.startsWith('#') || p.startsWith('//') || /^https?:\/\//i.test(p)) {
+      return `[${text}](${p})`;
+    }
+    return `[${text}](${joinBase(p)})`;
   });
 
-  s = s.replace(/\bsrc=(["'])(\/[^"']+)\1/g, (_, q, p) => `src=${q}${RAW_BASE}${p}${q}`);
-  s = s.replace(/\bhref=(["'])(\/[^"']+)\1/g, (_, q, p) => {
-    if (p.startsWith('//')) return `href=${q}${p}${q}`;
-    return `href=${q}${RAW_BASE}${p}${q}`;
-  });
+  s = s.replace(/\bsrc=(["'])([^"']+)\1/g, (_, q, p) => `src=${q}${joinBase(p)}${q}`);
+  s = s.replace(/\bhref=(["'])([^"']+)\1/g, (_, q, p) => `href=${q}${joinBase(p)}${q}`);
 
   return s;
 }
@@ -161,8 +166,10 @@ function parseCallout(lines, start) {
   while (i < lines.length) {
     const l = lines[i];
 
+    if (isCalloutStart(l)) break;
+
     if (l.trim() === '') {
-      if (i + 1 < lines.length && /^\s*>/.test(lines[i + 1])) {
+      if (i + 1 < lines.length && /^\s*>/.test(lines[i + 1]) && !isCalloutStart(lines[i + 1])) {
         bodyLines.push('');
         i++;
         continue;
@@ -404,7 +411,11 @@ function buildManifest() {
       ? data.order
       : (file === path.resolve('README.md') ? -1 : index);
 
-    const rewritten = rewriteAssetUrls(content);
+    const relDir = path.dirname(rel).split(path.sep).join('/');
+    const fileDir = relDir === '.' ? '' : relDir;
+
+    const withoutComments = stripHtmlComments(content);
+    const rewritten = rewriteAssetUrls(withoutComments, fileDir);
     const blocks = parseMarkdownToBlocks(rewritten);
 
     return {
