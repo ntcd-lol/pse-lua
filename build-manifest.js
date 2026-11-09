@@ -21,7 +21,6 @@ function parseInline(text) {
   while (i < text.length) {
     const ch = text[i];
 
-      
     if (ch === '`') {
       const end = text.indexOf('`', i + 1);
       if (end !== -1) {
@@ -31,7 +30,6 @@ function parseInline(text) {
       }
     }
 
-      
     if (ch === '*' && text[i + 1] === '*') {
       const end = text.indexOf('**', i + 2);
       if (end !== -1) {
@@ -41,7 +39,6 @@ function parseInline(text) {
       }
     }
 
-      
     if (ch === '*') {
       const end = text.indexOf('*', i + 1);
       if (end !== -1) {
@@ -51,7 +48,6 @@ function parseInline(text) {
       }
     }
 
-      
     if (ch === '[') {
       const close = text.indexOf(']', i + 1);
       if (close !== -1 && text[close + 1] === '(') {
@@ -68,7 +64,6 @@ function parseInline(text) {
       }
     }
 
-      
     let j = i + 1;
     while (j < text.length && !'`*['.includes(text[j])) j++;
     pushText(text.slice(i, j));
@@ -78,9 +73,6 @@ function parseInline(text) {
   return nodes;
 }
 
-/* ============================================================
- * ТАБЛИЦЫ
- * ============================================================ */
 function isTableRow(line) {
   return /^\s*\|.*\|\s*$/.test(line);
 }
@@ -124,12 +116,12 @@ function parseList(lines, start) {
   return { block: { type: 'list', ordered, items }, nextIndex: i };
 }
 
-const HTML_PAIR_TAGS = 'div|table|thead|tbody|tr|td|th|span|p|ul|ol|li|a|h[1-6]|section|article|header|footer|nav|main';
+const HTML_PAIR_TAGS = 'div|table|thead|tbody|tr|td|th|span|p|ul|ol|li|a|h[1-6]|section|article|header|footer|nav|main|figure|figcaption|details|summary|strong|em|b|i|code|pre|blockquote';
 const HTML_OPEN_RE  = new RegExp(`<(${HTML_PAIR_TAGS})\\b[^>]*>`, 'gi');
 const HTML_CLOSE_RE = new RegExp(`</(${HTML_PAIR_TAGS})\\s*>`, 'gi');
 
 function isHtmlStart(line) {
-  return /^\s*<(div|table|section|article|header|footer|nav|main|p|ul|ol|h[1-6])\b/i.test(line);
+  return /^\s*<(!|div|table|section|article|header|footer|nav|main|p|ul|ol|h[1-6]|span|figure|img|br|hr)\b/i.test(line);
 }
 
 function parseHtmlBlock(lines, start) {
@@ -155,6 +147,9 @@ function parseHtmlBlock(lines, start) {
   return { block: { type: 'html', content: htmlLines.join('\n').trim() }, nextIndex: i };
 }
 
+/* ============================================================
+ * ОСНОВНОЙ ПАРСЕР
+ * ============================================================ */
 function parseMarkdownToBlocks(markdown) {
   const lines = markdown.split('\n');
   const blocks = [];
@@ -171,7 +166,6 @@ function parseMarkdownToBlocks(markdown) {
   while (i < lines.length) {
     const line = lines[i];
 
-      
     if (isHtmlStart(line)) {
       flushParagraph();
       const { block, nextIndex } = parseHtmlBlock(lines, i);
@@ -180,8 +174,7 @@ function parseMarkdownToBlocks(markdown) {
       continue;
     }
 
-      
-    const fence = line.match(/^```(  *)\s*$/);
+    const fence = line.match(/^```(\w*)\s*$/);
     if (fence) {
       flushParagraph();
       const lang = fence[1] || 'text';
@@ -196,7 +189,6 @@ function parseMarkdownToBlocks(markdown) {
       continue;
     }
 
-      
     const h = line.match(/^(#{1,6})\s+(.+?)\s*$/);
     if (h) {
       flushParagraph();
@@ -205,7 +197,6 @@ function parseMarkdownToBlocks(markdown) {
       continue;
     }
 
-      
     if (isTableRow(line) && i + 1 < lines.length && isTableSeparator(lines[i + 1])) {
       flushParagraph();
       const { block, nextIndex } = parseTable(lines, i);
@@ -216,7 +207,6 @@ function parseMarkdownToBlocks(markdown) {
       continue;
     }
 
-      
     if (isListItem(line)) {
       flushParagraph();
       const { block, nextIndex } = parseList(lines, i);
@@ -226,7 +216,6 @@ function parseMarkdownToBlocks(markdown) {
       continue;
     }
 
-      
     if (/^\s*---+\s*$/.test(line)) {
       flushParagraph();
       blocks.push({ type: 'hr' });
@@ -234,7 +223,6 @@ function parseMarkdownToBlocks(markdown) {
       continue;
     }
 
-      
     if (line.trim() === '') {
       flushParagraph();
       i++;
@@ -251,18 +239,8 @@ function parseMarkdownToBlocks(markdown) {
 
 function stripServiceHtml(content) {
   let s = content;
-
-    
-  s = s.replace(
-    /^\s*<div[^>]*align\s*=\s*["']center["'][^>]*>[\s\S]*?<\/div>\s*(?:---\s*)?/i,
-    ''
-  );
-
-  s = s.replace(
-    /(?:---\s*)?<div[^>]*align\s*=\s*["']center["'][^>]*>[\s\S]*?<\/div>\s*$/i,
-    ''
-  );
-
+  s = s.replace(/^\s*<div[^>]*align\s*=\s*["']center["'][^>]*>[\s\S]*?<\/div>\s*(?:---\s*)?/i, '');
+  s = s.replace(/(?:---\s*)?<div[^>]*align\s*=\s*["']center["'][^>]*>[\s\S]*?<\/div>\s*$/i, '');
   return s.trim();
 }
 
@@ -283,15 +261,16 @@ function buildManifest() {
   const files = collectMarkdownFiles(DOCS_DIR);
 
   const sections = files.map((file, index) => {
-    const rel = path.relative(DOCS_DIR, file).replace(/\\/g, '/');
+    const rel = path.relative(DOCS_DIR, file).split(path.sep).join('/');
     const raw = fs.readFileSync(file, 'utf8');
     const { data, content } = matter(raw);
 
-    const id    = data.id    || rel.replace(/\.md$/, '').replace(/\//g, '-');
+    const noExt = rel.endsWith('.md') ? rel.slice(0, -3) : rel;
+    const id    = data.id    || noExt.split('/').join('-');
     const title = data.title || id;
     const order = typeof data.order === 'number' ? data.order : index;
 
-    const cleaned = stripServiceHtml(content);
+    const cleaned = content;
 
     return {
       id,
