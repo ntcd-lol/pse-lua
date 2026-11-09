@@ -287,7 +287,7 @@ function buildManifest() {
     const raw = fs.readFileSync(file, 'utf8');
     const { data, content } = matter(raw);
 
-    const id    = data.id    || rel.replace(/\.md$/, '').replace(/\  
+    const id    = data.id    || rel.replace(/\.md$/, '').replace(/\//g, '-');
     const title = data.title || id;
     const order = typeof data.order === 'number' ? data.order : index;
 
