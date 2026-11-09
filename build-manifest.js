@@ -7,63 +7,192 @@ const OUTPUT   = process.env.OUTPUT   || './manifest.json';
 const PROJECT  = process.env.PROJECT  || 'pse-lua';
 const OWNER    = process.env.OWNER    || 'ntcd-lol';
 
+function parseInline(text) {
+  const nodes = [];
+  let i = 0;
+  const push = (node) => { if (node) nodes.push(node); };
+
+  while (i < text.length) {
+    if (text[i] === '`') {
+      const end = text.indexOf('`', i + 1);
+      if (end !== -1) {
+        push({ type: 'code', value: text.slice(i + 1, end) });
+        i = end + 1;
+        continue;
+      }
+    }
+    if (text[i] === '*' && text[i + 1] === '*') {
+      const end = text.indexOf('**', i + 2);
+      if (end !== -1) {
+        push({ type: 'bold', value: text.slice(i + 2, end) });
+        i = end + 2;
+        continue;
+      }
+    }
+    if (text[i] === '*') {
+      const end = text.indexOf('*', i + 1);
+      if (end !== -1) {
+        push({ type: 'italic', value: text.slice(i + 1, end) });
+        i = end + 1;
+        continue;
+      }
+    }
+    if (text[i] === '[') {
+      const close = text.indexOf(']', i + 1);
+      if (close !== -1 && text[close + 1] === '(') {
+        const paren = text.indexOf(')', close + 2);
+        if (paren !== -1) {
+          push({
+            type: 'link',
+            text: text.slice(i + 1, close),
+            href: text.slice(close + 2, paren)
+          });
+          i = paren + 1;
+          continue;
+        }
+      }
+    }
+    let j = i + 1;
+    while (j < text.length && !'`*['.includes(text[j])) j++;
+    push({ type: 'text', value: text.slice(i, j) });
+    i = j;
+  }
+
+  const merged = [];
+  for (const n of nodes) {
+    if (n.type === 'text' && merged.length && merged[merged.length - 1].type === 'text') {
+      merged[merged.length - 1].value += n.value;
+    } else {
+      merged.push(n);
+    }
+  }
+  return merged;
+}
+
+function isTableRow(line) {
+  return /^\s*\|.*\|\s*$/.test(line);
+}
+function isTableSeparator(line) {
+  return /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)+\|?\s*$/.test(line);
+}
+function splitTableRow(line) {
+  let s = line.trim();
+  if (s.startsWith('|')) s = s.slice(1);
+  if (s.endsWith('|')) s = s.slice(0, -1);
+  return s.split('|').map(c => c.trim());
+}
+function parseTable(lines, start) {
+  const header = splitTableRow(lines[start]);
+  const rows = [];
+  let i = start + 1;
+  if (i < lines.length && isTableSeparator(lines[i])) i++;
+  while (i < lines.length && isTableRow(lines[i])) {
+    rows.push(splitTableRow(lines[i]));
+    i++;
+  }
+  return { block: { type: 'table', header, rows }, nextIndex: i };
+}
+
+function isListItem(line) {
+  return /^\s*([-*+]|\d+\.)\s+/.test(line);
+}
+function parseList(lines, start) {
+  const items = [];
+  let i = start;
+  let ordered = /^\s*\d+\./.test(lines[start]);
+  while (i < lines.length && isListItem(lines[i])) {
+    const m = lines[i].match(/^\s*([-*+]|\d+\.)\s+(.*)$/);
+    items.push(m[2]);
+    i++;
+    // многострочные элементы списка — строки с отступом
+    while (i < lines.length && /^\s{2,}\S/.test(lines[i]) && !isListItem(lines[i])) {
+      items[items.length - 1] += ' ' + lines[i].trim();
+      i++;
+    }
+  }
+  return { block: { type: 'list', ordered, items }, nextIndex: i };
+}
+
 function parseMarkdownToBlocks(markdown) {
   const lines = markdown.split('\n');
   const blocks = [];
+  let i = 0;
 
-  let buf = [];
-  let mode = 'prose';
-  let lang = null;
-
-  const flushProse = () => {
+  const flushParagraph = (buf) => {
     const text = buf.join('\n').trim();
-    buf = [];
     if (!text) return;
-
-    // Разбиваем prose на подблоки по заголовкам
-    const segments = text.split(/\n(?=#{1,6}\s)/);
-    for (const seg of segments) {
-      const trimmed = seg.trim();
-      if (!trimmed) continue;
-
-      const headingMatch = trimmed.match(/^(#{1,6})\s+(.+)$/s);
-      if (headingMatch) {
-        blocks.push({
-          type: 'heading',
-          level: headingMatch[1].length,
-          content: headingMatch[2].trim()
-        });
-      } else {
-        blocks.push({ type: 'prose', content: trimmed });
-      }
-    }
+    blocks.push({ type: 'prose', inline: parseInline(text) });
   };
 
-  const flushCode = () => {
-    const text = buf.join('\n');
-    buf = [];
-    blocks.push({ type: 'code', language: lang || 'text', content: text });
-  };
+  let para = [];
 
-  for (const line of lines) {
+  while (i < lines.length) {
+    const line = lines[i];
+
     const fence = line.match(/^```(\w*)\s*$/);
     if (fence) {
-      if (mode === 'prose') {
-        flushProse();
-        mode = 'code';
-        lang = fence[1] || 'text';
-      } else {
-        flushCode();
-        mode = 'prose';
-        lang = null;
+      flushParagraph(para); para = [];
+      const lang = fence[1] || 'text';
+      const codeLines = [];
+      i++;
+      while (i < lines.length && !/^```\s*$/.test(lines[i])) {
+        codeLines.push(lines[i]);
+        i++;
       }
+      i++; // закрывающий ```
+      blocks.push({ type: 'code', language: lang, content: codeLines.join('\n') });
       continue;
     }
-    buf.push(line);
-  }
 
-  if (mode === 'code') flushCode();
-  else flushProse();
+    const h = line.match(/^(#{1,6})\s+(.+?)\s*$/);
+    if (h) {
+      flushParagraph(para); para = [];
+      blocks.push({
+        type: 'heading',
+        level: h[1].length,
+        inline: parseInline(h[2])
+      });
+      i++;
+      continue;
+    }
+
+    if (isTableRow(line) && i + 1 < lines.length && isTableSeparator(lines[i + 1])) {
+      flushParagraph(para); para = [];
+      const { block, nextIndex } = parseTable(lines, i);
+      // инлайн-разметку в ячейках тоже парсим
+      block.header = block.header.map(parseInline);
+      block.rows   = block.rows.map(r => r.map(parseInline));
+      blocks.push(block);
+      i = nextIndex;
+      continue;
+    }
+
+    if (isListItem(line)) {
+      flushParagraph(para); para = [];
+      const { block, nextIndex } = parseList(lines, i);
+      block.items = block.items.map(parseInline);
+      blocks.push(block);
+      i = nextIndex;
+      continue;
+    }
+
+    if (/^\s*---+\s*$/.test(line)) {
+      flushParagraph(para); para = [];
+      blocks.push({ type: 'hr' });
+      i++;
+      continue;
+    }
+
+    if (line.trim() === '') {
+      flushParagraph(para); para = [];
+      i++;
+      continue;
+    }
+
+    para.push(line);
+    i++;
+  }
+  flushParagraph(para);
 
   return blocks;
 }
@@ -83,12 +212,10 @@ function collectMarkdownFiles(dir) {
 
 function buildManifest() {
   const files = collectMarkdownFiles(DOCS_DIR);
-
   const sections = files.map((file, index) => {
     const rel = path.relative(DOCS_DIR, file).replace(/\\/g, '/');
     const raw = fs.readFileSync(file, 'utf8');
     const { data, content } = matter(raw);
-
     const id = data.id || rel.replace(/\.md$/, '').replace(/\//g, '-');
     return {
       id,
