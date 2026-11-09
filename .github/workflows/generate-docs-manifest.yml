@@ -7,6 +7,7 @@ on:
       - 'docs/*.md'
       - 'docs/**/*.md'
       - 'build-manifest.js'
+      - '.github/workflows/generate-docs-manifest.yml'
   workflow_dispatch:
 
 permissions:
@@ -33,17 +34,39 @@ jobs:
 
       - name: Update Gist
         env:
-          GIST_TOKEN: ${{ secrets.GIST_SECRET }}
-          GIST_ID: 'b4b3652e08f3272fd16cc1017311b3d9'
+          GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
+          GIST_ID: ${{ vars.GIST_ID }}
         run: |
-          jq -n \
-            --arg content "$(cat manifest.json)" \
-            '{ files: { "manifest.json": { content: $content } } }' > /tmp/gist-body.json
+          if [ -z "$GIST_ID" ]; then
+            echo "::error::GIST_ID is empty. Add it in Settings → Variables (not Secrets)."
+            exit 1
+          fi
 
-          curl -sS -X PATCH \
+          GIST_FILENAME="pselua-manifest.json"
+
+          # --rawfile читает файл на стороне jq, не через argv — обходит лимит
+          jq -n \
+            --rawfile content manifest.json \
+            --arg fname "$GIST_FILENAME" \
+            '{ files: { ($fname): { content: $content } } }' > /tmp/gist-body.json
+
+          echo "body size: $(wc -c < /tmp/gist-body.json) bytes"
+
+          HTTP_CODE=$(curl -sS -X PATCH \
             -H "Authorization: Bearer ${GIST_TOKEN}" \
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
-            -d @/tmp/gist-body.json \
+            --data-binary @/tmp/gist-body.json \
             "https://api.github.com/gists/${GIST_ID}" \
-            | jq -r '.files["pselua-manifest.json"].raw_url // .message'
+            -o /tmp/gist-response.json \
+            -w "%{http_code}")
+
+          echo "HTTP $HTTP_CODE"
+          jq . /tmp/gist-response.json || cat /tmp/gist-response.json
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "::error::Gist update failed with HTTP $HTTP_CODE"
+            exit 1
+          fi
+
+          jq -r --arg fname "$GIST_FILENAME" '.files[$fname].raw_url // "no raw_url"' /tmp/gist-response.json
