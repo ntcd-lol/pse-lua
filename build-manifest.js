@@ -135,6 +135,13 @@ function stripHtmlComments(md) {
   return md.replace(/<!--[\s\S]*?-->/g, '');
 }
 
+function stripFooterNav(md) {
+  return md.replace(
+    /(?:^|\n)\s*(?:---\s*\n\s*)?<div[^>]*align\s*=\s*["']center["'][^>]*>\s*<table[\s\S]*?<a\s[^>]*href[\s\S]*?<\/table>\s*<\/div>\s*$/i,
+    ''
+  );
+}
+
 function rewriteAssetUrls(markdown, fileDir) {
   const joinBase = (p) => {
     if (!p) return p;
@@ -424,7 +431,7 @@ function mdPathToSectionId(href, sections, currentSectionId) {
 
   if (!pathPart) {
     if (!currentSectionId || !anchorSlug) return href;
-    return `#sec-${currentSectionId}-${anchorSlug}`;
+    return `#${currentSectionId}-${anchorSlug}`;
   }
 
   if (!/\.md$/i.test(pathPart)) return href;
@@ -441,8 +448,8 @@ function mdPathToSectionId(href, sections, currentSectionId) {
   const exists = sections.some(s => s.id === id);
   if (!exists) return href;
 
-  if (anchorSlug) return `#sec-${id}-${anchorSlug}`;
-  return `#sec-${id}`;
+  if (anchorSlug) return `#${id}-${anchorSlug}`;
+  return `#${id}`;
 }
 
 function rewriteMdLinksInBlocks(blocks, sections, currentSectionId) {
@@ -570,7 +577,8 @@ function buildManifest() {
     const fileDir = relDir === '.' ? '' : relDir;
 
     const withoutComments = stripHtmlComments(content);
-    const rewritten = rewriteAssetUrls(withoutComments, fileDir);
+    const withoutFooter   = stripFooterNav(withoutComments);
+    const rewritten = rewriteAssetUrls(withoutFooter, fileDir);
     const blocks = parseMarkdownToBlocks(rewritten);
 
     return { id, title, sourceFile: rel, order, blocks };
